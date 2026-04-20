@@ -84,16 +84,16 @@ if command -v snakemake >/dev/null 2>&1; then
     ok "snakemake already installed (version $SMV)"
   else
     warn "snakemake $SMV is older than 8.x; upgrading..."
-    "${PKGMGR[@]}" install -y -n base -c conda-forge -c bioconda 'snakemake>=8'
+    "${PKGMGR[@]}" install -y -n base -c conda-forge -c bioconda 'snakemake>=8' pandas openpyxl
     ok "snakemake upgraded to $(snakemake --version 2>/dev/null)"
   fi
 else
   say "Installing snakemake into base env (this is a one-time install)..."
-  "${PKGMGR[@]}" install -y -n base -c conda-forge -c bioconda 'snakemake>=8'
+  "${PKGMGR[@]}" install -y -n base -c conda-forge -c bioconda 'snakemake>=8' pandas openpyxl
   # Re-check
   if ! command -v snakemake >/dev/null 2>&1; then
     err "snakemake install appears to have failed."
-    err "Try manually:  ${PKGMGR[*]} install -n base -c conda-forge -c bioconda 'snakemake>=8'"
+    err "Try manually:  ${PKGMGR[*]} install -n base -c conda-forge -c bioconda 'snakemake>=8' pandas openpyxl"
     exit 1
   fi
   ok "snakemake installed ($(snakemake --version 2>/dev/null))"

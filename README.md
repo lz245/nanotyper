@@ -95,6 +95,43 @@ source ~/.zshrc
 
 ---
 
+## Batch mode — many runs at once
+
+If you have several sequencing runs sitting in `~/ont-mlst-data/`, one
+command runs the pipeline on each and then aggregates a cross-run view:
+
+```bash
+~/ont-mlst-snakemake/batch_run.sh
+```
+
+Defaults: `<data_root>=~/ont-mlst-data`, `<analysis_root>=~/ont-mlst-analyses`.
+Override with positional args:
+
+```bash
+~/ont-mlst-snakemake/batch_run.sh /path/to/data /path/to/analyses
+```
+
+Behaviour:
+- Runs sequentially (one at a time, each uses all cores). 11 runs × ~1 h ≈ overnight.
+- **Resumable** — skips any run whose `results/mlst_report.html` already exists. Kill and restart safely.
+- **Fail-fast** — if any run fails, the batch stops so you can fix that run and re-run `batch_run.sh` to resume.
+- Progress log at `~/ont-mlst-analyses/batch.log` (append-only).
+
+Aggregate outputs land in `<analysis_root>/combined/`:
+| file | contents |
+|---|---|
+| `combined_summary.tsv` / `.xlsx` | all samples across all runs, one row each, with `run_folder` column |
+| `st_distribution.tsv` | ST × run pivot — how often each ST appears per run |
+| `qc_by_run.tsv` | QC-label × run pivot — success rate per run |
+| `replicates.tsv` | (if `biological_id` used) replicates that disagree on ST |
+
+Aggregate-only (after the fact, without rerunning any pipelines):
+```bash
+~/ont-mlst-snakemake/batch_run.sh --aggregate
+```
+
+---
+
 ## The samplesheet
 
 One CSV, one row per sequencing event (run × barcode).
