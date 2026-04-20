@@ -1,0 +1,30 @@
+# Snakemake working directory (conda envs, job metadata, logs)
+.snakemake/
+
+# Pipeline outputs
+results/
+logs/
+run.log
+*.log
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Conda local
+envs/*/
+
+# The resources/databases/ symlink points outside the repo — don't commit it.
+# If you later want databases tracked, remove this line and commit real files.
+resources/databases

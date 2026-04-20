@@ -1,0 +1,6 @@
+name: ont-mlst-medaka
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - medaka=2.2.1

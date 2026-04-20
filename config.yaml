@@ -1,0 +1,54 @@
+# ------------------------------------------------------------------
+# ONT-MLST Snakemake workflow configuration
+# ------------------------------------------------------------------
+
+# ---- paths (relative to the directory where you run snakemake) ----
+paths:
+  samplesheet: "samplesheet.csv"
+  results_dir: "results"
+  # Database root (either real dir or a symlink into the original pipeline)
+  databases_dir: "resources/databases"
+  # Medaka reference: 7 concatenated MLST genes (FASTA)
+  reference_genome: "resources/databases/ncbi.rename.fa"
+  # PubMLST allele FASTAs (one file per locus), BLAST DBs built here on setup
+  allele_db_dir: "resources/databases/pubmlst_ecoli_achtman/alleles"
+  # PubMLST ST profile table (header: ST adk fumC gyrB icd mdh purA recA clonal_complex)
+  profile_file: "resources/databases/pubmlst_ecoli_achtman/profiles.txt"
+
+# ---- MLST scheme ----
+mlst:
+  scheme_name: "ecoli_achtman"
+  loci:
+    - adk
+    - fumC
+    - gyrB
+    - icd
+    - mdh
+    - purA
+    - recA
+
+# ---- medaka consensus ----
+medaka:
+  model: "r1041_e82_400bps_sup_v5.0.0"
+  threads: 4
+
+# ---- BLAST allele calling ----
+blast:
+  min_identity: 100.0          # percent identity required for a "known" allele
+  require_full_length: true    # length must equal query length (full-length hit)
+  max_target_seqs: 1
+
+# ---- cutadapt primer coverage ----
+cutadapt:
+  error_rate: 0.1
+  primers_file: "resources/databases/primers.csv"
+
+# ---- QC thresholds (tunable without code changes) ----
+qc:
+  coverage_good: 100    # >=this coverage at a locus = PASS-eligible
+  coverage_warn: 50     # below this = FAIL for that locus
+  # QC label priority: FAIL > LOW_COVERAGE > NEW_ALLELE > NEW_ST > PASS
+
+# ---- default resources ----
+resources:
+  threads: 4

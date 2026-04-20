@@ -1,0 +1,7 @@
+name: ont-mlst-cutadapt
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - cutadapt=4.9
+  - pandas=2.2

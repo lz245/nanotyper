@@ -1,0 +1,568 @@
+---
+title: "ONT-MLST Analysis Report"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: flatly
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    toc_depth: 2
+    df_print: paged
+params:
+  summary: ""
+  long: ""
+  version: "dev"
+  commit: "no-git"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, warning = FALSE, message = FALSE,
+  fig.width = 10, fig.height = 5, dpi = 150, out.width = "100%"
+)
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(DT)
+  library(plotly)
+  library(knitr)
+  library(kableExtra)
+  library(htmltools)
+})
+
+theme_set(
+  theme_minimal(base_size = 13) +
+  theme(plot.title  = element_text(face = "bold", size = 15),
+        legend.position = "right",
+        panel.grid.minor = element_blank())
+)
+```
+
+```{r load-data, include=FALSE}
+summary_df <- read_tsv(params$summary, show_col_types = FALSE)
+long_df    <- read_tsv(params$long,    show_col_types = FALSE)
+
+LOCI <- c("adk","fumC","gyrB","icd","mdh","purA","recA")
+
+summary_df <- summary_df %>%
+  mutate(
+    ST_label   = ifelse(is.na(ST) | ST %in% c("-","new_ST"),
+                        ifelse(qc_label == "NEW_ST", "Novel ST", "—"),
+                        paste0("ST-", ST)),
+    st_numeric = suppressWarnings(as.numeric(ST))
+  )
+
+QC_LEVELS  <- c("PASS","NEW_ST","LOW_COVERAGE","NEW_ALLELE","FAIL")
+QC_COLOURS <- c(PASS="#28a745", NEW_ST="#ffc107",
+                LOW_COVERAGE="#fd7e14", NEW_ALLELE="#e83e8c", FAIL="#dc3545")
+QC_BG      <- c(PASS="#e8f5e9", NEW_ST="#fff8e1",
+                LOW_COVERAGE="#fff1e0", NEW_ALLELE="#fce4ec", FAIL="#ffebee")
+
+qc_counts <- summary_df %>%
+  mutate(qc_label = factor(qc_label, levels = QC_LEVELS)) %>%
+  count(qc_label, .drop = FALSE) %>%
+  mutate(pct = 100 * n / sum(n))
+
+# Per-locus dot colour for a sample: FAIL-red > NEW_ALLELE-pink > LOW-orange > PASS-green
+dot_colour <- function(flag, coverage, cov_good = 100, cov_warn = 50) {
+  dplyr::case_when(
+    flag == "no_hit"        ~ "#dc3545",
+    coverage < cov_warn     ~ "#dc3545",
+    flag == "new_allele"    ~ "#e83e8c",
+    coverage < cov_good     ~ "#fd7e14",
+    TRUE                    ~ "#28a745"
+  )
+}
+
+# Build "● ● ● ● ● ● ●" HTML per sample, one dot per locus (in LOCI order).
+# Dots show a tooltip with locus, flag, coverage, identity.
+dots_by_sample <- long_df %>%
+  mutate(color = dot_colour(flag, coverage),
+         tip   = sprintf("%s: %s, cov=%d, id=%.1f%%",
+                         locus, flag, coverage, identity)) %>%
+  arrange(sample_id, match(locus, LOCI)) %>%
+  group_by(sample_id) %>%
+  summarise(
+    Loci = paste0(
+      '<span style="white-space:nowrap">',
+      paste(sprintf(
+        '<span title="%s" style="display:inline-block;width:12px;height:12px;border-radius:50%%;background:%s;margin-right:2px;vertical-align:middle;border:1px solid rgba(0,0,0,0.1)"></span>',
+        tip, color), collapse = ""),
+      "</span>"),
+    .groups = "drop"
+  )
+
+summary_df <- summary_df %>% left_join(dots_by_sample, by = "sample_id")
+
+total_samples <- nrow(summary_df)
+pass_samples  <- sum(summary_df$qc_label == "PASS")
+low_cov       <- sum(summary_df$qc_label == "LOW_COVERAGE")
+new_st        <- sum(summary_df$qc_label == "NEW_ST")
+new_allele    <- sum(summary_df$qc_label == "NEW_ALLELE")
+fail          <- sum(summary_df$qc_label == "FAIL")
+pass_rate     <- 100 * pass_samples / total_samples
+unique_sts    <- summary_df %>%
+                   filter(qc_label %in% c("PASS","LOW_COVERAGE")) %>%
+                   pull(ST) %>% unique() %>% length()
+unique_runs   <- n_distinct(summary_df$run_id)
+
+# Semantic colour for the banner + metric cards
+if (pass_rate >= 80) {
+  banner_class   <- "banner-green"
+  gradient_start <- "#28a745"; gradient_end <- "#1e7e34"
+  banner_icon    <- "✓"
+  banner_verdict <- sprintf("Run succeeded — %d of %d samples (%.0f%%) fully typed.",
+                             pass_samples, total_samples, pass_rate)
+} else if (pass_rate >= 50) {
+  banner_class   <- "banner-amber"
+  gradient_start <- "#fd7e14"; gradient_end <- "#d06400"
+  banner_icon    <- "⚠"
+  banner_verdict <- sprintf("Mixed run — %d of %d (%.0f%%) fully typed; review %d samples below.",
+                             pass_samples, total_samples, pass_rate,
+                             total_samples - pass_samples)
+} else {
+  banner_class   <- "banner-red"
+  gradient_start <- "#dc3545"; gradient_end <- "#a71d2a"
+  banner_icon    <- "✗"
+  banner_verdict <- sprintf("Run needs attention — only %d of %d (%.0f%%) fully typed. Check per-locus QC.",
+                             pass_samples, total_samples, pass_rate)
+}
+```
+
+```{css, echo=FALSE}
+/* Banner */
+.status-banner {
+  color: white; padding: 26px 30px; border-radius: 10px;
+  margin: 10px 0 24px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+}
+.status-banner .verdict {
+  font-size: 1.7em; font-weight: 700; margin-bottom: 6px;
+}
+.status-banner .sub { font-size: 1.05em; opacity: 0.92; }
+
+/* Metric cards */
+.metric-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px; margin: 10px 0 24px 0;
+}
+.metric-box {
+  color: white; padding: 18px 22px; border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.metric-label { font-size: 1.05em; opacity: 0.92; }
+.metric-value { font-size: 2.6em; font-weight: 700; margin: 6px 0; line-height: 1.1; }
+.metric-sub   { font-size: 0.95em; opacity: 0.85; }
+
+/* Quality badges */
+.qb { display: inline-block; padding: 3px 9px; border-radius: 5px;
+      font-weight: 600; font-size: 0.85em; }
+.qb-pass  { background:#d4edda; color:#155724; }
+.qb-newst { background:#fff3cd; color:#856404; }
+.qb-low   { background:#ffe8cc; color:#8a4a00; }
+.qb-newal { background:#fce4ec; color:#880e4f; }
+.qb-fail  { background:#f8d7da; color:#721c24; }
+
+/* Info panel */
+.info-panel {
+  background-color: #f1f5f9; border-left: 4px solid #64748b;
+  padding: 12px 16px; margin: 16px 0; border-radius: 5px;
+  font-size: 0.95em;
+}
+.interp {
+  background: #fff8e1; border-left: 3px solid #ffc107;
+  padding: 10px 14px; margin: 10px 0 20px 0; border-radius: 4px;
+  font-size: 0.95em;
+}
+.interp::before { content: "💡 "; }
+
+details summary {
+  cursor: pointer; font-weight: 600; padding: 8px 0;
+  color: #334155; font-size: 1.05em;
+}
+details summary:hover { color: #0f172a; }
+details[open] summary { margin-bottom: 12px; }
+```
+
+# Overview {.unnumbered}
+
+<div class="status-banner" style="background: linear-gradient(135deg, `r gradient_start` 0%, `r gradient_end` 100%);">
+  <div class="verdict">`r banner_icon` &nbsp; `r banner_verdict`</div>
+  <div class="sub">Report generated `r format(Sys.time(), "%Y-%m-%d %H:%M")` · *E. coli* Achtman 7-locus scheme · `r total_samples` samples across `r unique_runs` run(s).</div>
+</div>
+
+```{r metric-cards}
+card_colour <- function(rate) {
+  if (rate >= 80) c("#28a745","#1e7e34")
+  else if (rate >= 50) c("#fd7e14","#d06400")
+  else c("#dc3545","#a71d2a")
+}
+cc <- card_colour(pass_rate)
+
+tagList(
+  div(class = "metric-grid",
+    div(class = "metric-box",
+        style = sprintf("background: linear-gradient(135deg, %s 0%%, %s 100%%);", cc[1], cc[2]),
+        div(class = "metric-label", "Fully typed (PASS)"),
+        div(class = "metric-value", pass_samples),
+        div(class = "metric-sub", sprintf("%.0f%% of %d", pass_rate, total_samples))
+    ),
+    div(class = "metric-box",
+        style = "background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);",
+        div(class = "metric-label", "Total samples"),
+        div(class = "metric-value", total_samples),
+        div(class = "metric-sub", paste(unique_runs, "run(s)"))
+    ),
+    div(class = "metric-box",
+        style = "background: linear-gradient(135deg, #5a3d8c 0%, #3d2463 100%);",
+        div(class = "metric-label", "Unique STs called"),
+        div(class = "metric-value", unique_sts),
+        div(class = "metric-sub", "includes low-coverage calls")
+    ),
+    div(class = "metric-box",
+        style = sprintf("background: linear-gradient(135deg, %s 0%%, %s 100%%);",
+                        ifelse(fail + new_allele > 0, "#dc3545", "#6b7280"),
+                        ifelse(fail + new_allele > 0, "#a71d2a", "#4b5563")),
+        div(class = "metric-label", "Need attention"),
+        div(class = "metric-value", fail + new_allele),
+        div(class = "metric-sub", sprintf("%d FAIL, %d NEW_ALLELE", fail, new_allele))
+    )
+  )
+)
+```
+
+<div class="info-panel">
+**QC labels:**
+<span class="qb qb-pass">✓ PASS</span> all 7 loci known at 100% identity, ≥100× coverage, ST in PubMLST &nbsp;·&nbsp;
+<span class="qb qb-newst">NEW_ST</span> novel 7-allele combination &nbsp;·&nbsp;
+<span class="qb qb-low">LOW_COVERAGE</span> 50–99× on at least one locus &nbsp;·&nbsp;
+<span class="qb qb-newal">NEW_ALLELE</span> imperfect BLAST match on at least one locus &nbsp;·&nbsp;
+<span class="qb qb-fail">✗ FAIL</span> <50× coverage or no hit
+</div>
+
+---
+
+# Per-locus diagnostics
+
+This is the first place to look when samples fail. If a single locus is weak across **most** samples, the problem is upstream (primer, amplification, basecaller) rather than per-sample.
+
+```{r locus-qc-panel, fig.height=4}
+locus_stats <- long_df %>%
+  group_by(locus) %>%
+  summarise(
+    n_samples      = n(),
+    n_high_cov     = sum(coverage >= 100),
+    n_mid_cov      = sum(coverage >= 50 & coverage < 100),
+    n_low_cov      = sum(coverage < 50),
+    n_known        = sum(flag == "known"),
+    n_new_allele   = sum(flag == "new_allele"),
+    n_no_hit       = sum(flag == "no_hit"),
+    median_cov     = median(coverage),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    pct_high = 100 * n_high_cov / n_samples,
+    pct_mid  = 100 * n_mid_cov  / n_samples,
+    pct_low  = 100 * n_low_cov  / n_samples,
+    locus    = factor(locus, levels = LOCI)
+  ) %>%
+  arrange(locus)
+
+cov_long <- locus_stats %>%
+  select(locus, `≥100× (good)` = pct_high,
+         `50–99× (warn)`       = pct_mid,
+         `<50× (fail)`         = pct_low) %>%
+  pivot_longer(-locus, names_to = "band", values_to = "pct") %>%
+  mutate(band = factor(band,
+                       levels = c("≥100× (good)","50–99× (warn)","<50× (fail)")))
+
+plot_ly(cov_long,
+        y = ~locus, x = ~pct, color = ~band,
+        type = 'bar', orientation = 'h',
+        colors = c("#28a745","#fd7e14","#dc3545"),
+        text = ~sprintf("%s — %s: %.0f%%", locus, band, pct),
+        hoverinfo = 'text') %>%
+  layout(barmode = 'stack',
+         title = list(text = "Share of samples meeting each coverage threshold, per locus",
+                      font = list(size = 14)),
+         xaxis = list(title = "% of samples", ticksuffix = "%", range = c(0,100)),
+         yaxis = list(title = "", categoryorder = "array", categoryarray = rev(LOCI)),
+         legend = list(orientation = "h", x = 0.02, y = -0.15))
+```
+
+```{r locus-interp, results='asis'}
+weak_loci <- locus_stats %>% filter(pct_low > 25) %>% pull(locus) %>% as.character()
+flagged_loci <- locus_stats %>% filter(n_new_allele > 0 | n_no_hit > 0) %>%
+                pull(locus) %>% as.character()
+
+msg <- if (length(weak_loci) == 0 && length(flagged_loci) == 0) {
+  "All 7 loci performed acceptably across this run. Individual FAIL/NEW_ALLELE calls are per-sample, not systemic."
+} else {
+  paste0(
+    if (length(weak_loci) > 0) sprintf(
+      "**%s** had <50× coverage in >25%% of samples — check the primer stock, amplification conditions, or read-length filtering for this locus. ",
+      paste(weak_loci, collapse = ", ")) else "",
+    if (length(flagged_loci) > 0) sprintf(
+      "Imperfect BLAST matches were observed for **%s**; these may be genuinely novel alleles or basecalling artefacts worth verifying on a higher-accuracy model.",
+      paste(flagged_loci, collapse = ", ")) else ""
+  )
+}
+cat('<div class="interp">', msg, '</div>', sep = "")
+```
+
+---
+
+# Samples needing attention
+
+Prioritised list — FAIL and NEW_ALLELE first. LOW_COVERAGE samples still have an ST call but one or more loci are undercovered.
+
+The **Loci** column shows a quick 7-dot summary (adk · fumC · gyrB · icd · mdh · purA · recA). Hover a dot for details.
+<span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#28a745;vertical-align:middle;border:1px solid rgba(0,0,0,0.1)"></span> known & ≥100× &nbsp;·&nbsp;
+<span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#fd7e14;vertical-align:middle;border:1px solid rgba(0,0,0,0.1)"></span> known & 50–99× &nbsp;·&nbsp;
+<span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#e83e8c;vertical-align:middle;border:1px solid rgba(0,0,0,0.1)"></span> new allele &nbsp;·&nbsp;
+<span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#dc3545;vertical-align:middle;border:1px solid rgba(0,0,0,0.1)"></span> <50× / no hit
+
+```{r attention-table}
+attn <- summary_df %>%
+  filter(qc_label %in% c("FAIL","NEW_ALLELE","LOW_COVERAGE","NEW_ST")) %>%
+  mutate(
+    priority = match(qc_label, c("FAIL","NEW_ALLELE","LOW_COVERAGE","NEW_ST")),
+    ST = ST_label
+  ) %>%
+  arrange(priority) %>%
+  select(any_of(c("sample_id","run_id","barcode","sample_type",
+                  "qc_label","ST","Loci","qc_notes",
+                  "adk","fumC","gyrB","icd","mdh","purA","recA")))
+
+if (nrow(attn) > 0) {
+  datatable(
+    attn, rownames = FALSE, filter = "top",
+    escape = FALSE,
+    extensions = "Buttons",
+    options = list(pageLength = 15, scrollX = TRUE, dom = 'Bfrtip',
+                   buttons = c('copy','csv','excel'),
+                   columnDefs = list(
+                     list(className = 'dt-center', targets = which(names(attn) == "Loci") - 1)
+                   ))
+  ) %>%
+    formatStyle("qc_label", target = "row",
+                backgroundColor = styleEqual(QC_LEVELS, QC_BG)) %>%
+    formatStyle("qc_label", fontWeight = "bold",
+                color = styleEqual(QC_LEVELS, QC_COLOURS))
+} else {
+  cat('<div class="interp">✓ No samples need review — every sample PASSed cleanly.</div>')
+}
+```
+
+```{r attention-interp, results='asis'}
+actions <- c()
+if (fail > 0)        actions <- c(actions, sprintf("**%d FAIL** → resequence (low coverage) or check barcode assignment", fail))
+if (new_allele > 0)  actions <- c(actions, sprintf("**%d NEW_ALLELE** → review BLAST identity; if confirmed novel, submit to PubMLST", new_allele))
+if (low_cov > 0)     actions <- c(actions, sprintf("**%d LOW_COVERAGE** → ST is likely correct but some loci undersampled; verify if publishing", low_cov))
+if (new_st > 0)      actions <- c(actions, sprintf("**%d NEW_ST** → all alleles known but combination is novel; candidate PubMLST submission", new_st))
+if (length(actions) > 0) {
+  cat('<div class="interp">Suggested actions: ', paste(actions, collapse = " · "), '</div>', sep = "")
+}
+```
+
+---
+
+# Successful STs
+
+```{r qc-dist, fig.height=4}
+plot_ly(qc_counts %>% filter(n > 0),
+        labels = ~qc_label, values = ~n,
+        type = 'pie', textposition = 'inside', textinfo = 'label+percent',
+        marker = list(colors = QC_COLOURS[levels(qc_counts$qc_label)],
+                      line = list(color = '#ffffff', width = 2)),
+        hoverinfo = 'text',
+        text = ~sprintf("%s: %d samples (%.1f%%)", qc_label, n, pct)) %>%
+  layout(title = list(text = "QC label distribution", font = list(size = 14)),
+         showlegend = TRUE, margin = list(t = 40, b = 20))
+```
+
+## ST frequency
+
+```{r st-bar, fig.height=4.5}
+st_counts <- summary_df %>%
+  filter(!is.na(st_numeric)) %>%
+  count(st_numeric, sort = TRUE) %>%
+  head(20) %>%
+  mutate(st_label = paste0("ST-", st_numeric))
+
+if (nrow(st_counts) > 0) {
+  plot_ly(st_counts,
+          x = ~reorder(st_label, n), y = ~n,
+          type = 'bar',
+          marker = list(color = ~n, colorscale = 'Viridis', showscale = FALSE),
+          text = ~sprintf("ST-%s: %d samples", st_numeric, n),
+          hoverinfo = 'text') %>%
+    layout(title = list(text = "Top sequence types (by sample count)",
+                        font = list(size = 14)),
+           xaxis = list(title = "Sequence Type", tickangle = -45),
+           yaxis = list(title = "Samples"),
+           margin = list(b = 60))
+} else {
+  cat('<div class="interp">No known STs were called in this run.</div>')
+}
+```
+
+```{r st-interp, results='asis'}
+if (nrow(st_counts) > 0) {
+  top <- st_counts[1, ]
+  more_than_one <- sum(st_counts$n > 1)
+  msg <- sprintf(
+    "The most frequent ST in this run is **ST-%s** (%d samples). %d ST%s appeared in more than one sample — a signal of related isolates.",
+    top$st_numeric, top$n, more_than_one, ifelse(more_than_one == 1, "", "s")
+  )
+  cat('<div class="interp">', msg, '</div>', sep = "")
+}
+```
+
+## ST × sample type
+
+```{r type-breakdown, fig.height=4}
+if ("sample_type" %in% colnames(summary_df) && any(!is.na(summary_df$sample_type))) {
+  type_qc <- summary_df %>%
+    mutate(qc_label = factor(qc_label, levels = QC_LEVELS)) %>%
+    count(sample_type, qc_label, .drop = FALSE) %>%
+    group_by(sample_type) %>% mutate(pct = 100 * n / sum(n)) %>% ungroup()
+
+  plot_ly(type_qc,
+          x = ~sample_type, y = ~n, color = ~qc_label,
+          colors = QC_COLOURS,
+          type = 'bar',
+          text = ~sprintf("%s — %s: %d (%.1f%%)", sample_type, qc_label, n, pct),
+          hoverinfo = 'text') %>%
+    layout(title = list(text = "QC outcomes by sample type", font = list(size = 14)),
+           barmode = 'stack',
+           xaxis = list(title = "Sample type"),
+           yaxis = list(title = "Samples"),
+           legend = list(title = list(text = "QC")))
+} else {
+  cat('<div class="interp">No sample_type column present.</div>')
+}
+```
+
+---
+
+# Complete results table
+
+Every sample in the run — use the filter boxes to narrow down.
+
+```{r full-table}
+disp <- summary_df %>%
+  mutate(ST = ST_label) %>%
+  select(any_of(c("sample_id","run_id","barcode","collection_date","sample_type",
+                  "ST","Loci","adk","fumC","gyrB","icd","mdh","purA","recA",
+                  "qc_label","qc_notes")))
+
+datatable(
+  disp, rownames = FALSE, filter = "top",
+  escape = FALSE,
+  extensions = "Buttons",
+  options = list(pageLength = 25, scrollX = TRUE, searchHighlight = TRUE,
+                 dom = 'Bfrtip', buttons = c('copy','csv','excel'))
+) %>%
+  formatStyle("qc_label", target = "row",
+              backgroundColor = styleEqual(QC_LEVELS, QC_BG)) %>%
+  formatStyle("ST", fontWeight = "bold", color = "#5a3d8c")
+```
+
+---
+
+# Advanced
+
+<details>
+<summary>Allele heatmap (top STs × 7 loci)</summary>
+
+```{r allele-heatmap, fig.height=7}
+top_st_ids <- summary_df %>%
+  filter(qc_label %in% c("PASS","LOW_COVERAGE"), !is.na(st_numeric)) %>%
+  count(st_numeric, sort = TRUE) %>% head(30) %>% pull(st_numeric)
+
+allele_mat <- summary_df %>%
+  filter(st_numeric %in% top_st_ids) %>%
+  select(st_numeric, all_of(LOCI)) %>% distinct() %>% arrange(st_numeric) %>%
+  mutate(st_label = paste0("ST-", st_numeric)) %>%
+  select(-st_numeric) %>% column_to_rownames("st_label") %>%
+  mutate(across(everything(), ~ suppressWarnings(as.numeric(.))))
+
+if (nrow(allele_mat) >= 1) {
+  plot_ly(z = as.matrix(allele_mat),
+          x = colnames(allele_mat), y = rownames(allele_mat),
+          type = "heatmap", colorscale = "Viridis",
+          colorbar = list(title = "Allele #"),
+          text = as.matrix(allele_mat),
+          hovertemplate = 'ST: %{y}<br>Locus: %{x}<br>Allele: %{z}<extra></extra>') %>%
+    layout(xaxis = list(title = "Locus"),
+           yaxis = list(title = "Sequence type"),
+           margin = list(l = 100))
+} else {
+  cat('_Not enough known STs to build a heatmap._')
+}
+```
+</details>
+
+<details>
+<summary>Per-locus detail (every sample × locus)</summary>
+
+```{r long-table}
+datatable(long_df, rownames = FALSE, filter = "top",
+          extensions = "Buttons",
+          options = list(pageLength = 25, scrollX = TRUE, dom = 'Bfrtip',
+                         buttons = c('copy','csv','excel')))
+```
+</details>
+
+<details>
+<summary>Coverage vs identity (all samples × loci)</summary>
+
+```{r cov-ident, fig.height=5}
+long_df %>%
+  mutate(status = case_when(
+    flag == "known"       ~ "known allele",
+    flag == "new_allele"  ~ "potential new allele",
+    flag == "no_hit"      ~ "no BLAST hit",
+    TRUE                  ~ flag
+  )) %>%
+  plot_ly(x = ~coverage, y = ~identity, color = ~status,
+          text = ~paste0(sample_id, " / ", locus),
+          type = "scatter", mode = "markers",
+          marker = list(size = 9, opacity = 0.75)) %>%
+  layout(xaxis = list(title = "Primer-based read coverage (cutadapt)"),
+         yaxis = list(title = "BLAST percent identity", range = c(90, 101)))
+```
+</details>
+
+<details>
+<summary>Methods</summary>
+
+**MLST typing** uses the PubMLST *Escherichia coli* Achtman 7-locus scheme (adk, fumC, gyrB, icd, mdh, purA, recA; <https://pubmlst.org/escherichia/>).
+
+**Consensus generation** — per-barcode fastq are concatenated, then medaka (model `r1041_e82_400bps_sup_v5.0.0`) builds a per-gene consensus against a 7-gene concatenated reference.
+
+**Allele calling** — consensus contigs are BLASTed against each locus's PubMLST allele FASTA. A locus is *known* if the best hit covers the full allele length at 100% identity; otherwise flagged as a potential *new allele*.
+
+**Primer coverage QC** — cutadapt scans reads for the 5' (`-g`) and 3' (`-a`) primers at error rate 0.1; reads with both primers are counted as the coverage metric. <50× triggers FAIL for that locus; 50–99× triggers LOW_COVERAGE.
+
+**ST assignment** — the 7 called alleles are joined to the PubMLST profile table. Exact match → ST; otherwise `NEW_ST`.
+
+**QC label priority** — FAIL > LOW_COVERAGE > NEW_ALLELE > NEW_ST > PASS. The most severe condition wins.
+</details>
+
+<details>
+<summary>Session info (for reproducibility)</summary>
+
+```{r session}
+sessionInfo()
+```
+</details>
+
+---
+
+<div style="color:#64748b; font-size:0.9em; text-align:center; margin: 30px 0 15px 0; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+  ONT-MLST pipeline <strong>v`r params$version`</strong> · commit <code>`r params$commit`</code> · report generated `r format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")`
+  <br>
+  Samplesheet: <code>`r basename(params$summary)`</code> · <em>E. coli</em> Achtman 7-locus scheme
+</div>

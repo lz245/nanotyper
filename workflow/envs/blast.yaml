@@ -1,0 +1,7 @@
+name: ont-mlst-blast
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - blast=2.16.0
+  - samtools=1.21
