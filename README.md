@@ -89,25 +89,68 @@ source ~/.zshrc
 
 ## The samplesheet
 
-One CSV, one row per sample:
+One CSV, one row per sequencing event (run × barcode).
 
 | column | required | description |
 |---|---|---|
-| `sample_id` | yes | Unique across the sheet. Letters/digits/_.- only |
+| `sample_id` | yes | **Unique** across the sheet. Becomes the result-folder name. Letters/digits/`_`/`.`/`-` only. |
 | `run_id` | yes | Sequencing run label (e.g. `run003`) |
 | `barcode` | yes | e.g. `barcode01` |
-| `fastq_dir` | yes | Absolute path to the barcode's `.fastq.gz` folder |
+| `fastq_dir` | no | Path to the barcode's `.fastq.gz` folder. If omitted, auto-filled from `paths.fastq_dir_template` in `config.yaml` (default: `fastq_pass/{barcode}`). |
+| `biological_id` | no | Underlying organism / source. Use to group replicates and cross-run controls. |
 | `collection_date` | no | Free text; shown in the report |
-| `sample_type` | no | Free text; shown in the report |
+| `sample_type` | no | Free text (e.g. `clinical`, `environmental`, `control`); shown in the report |
 
-Example:
-```csv
-sample_id,run_id,barcode,fastq_dir,collection_date,sample_type
-MS1451,run003,barcode01,/Users/you/ont-mlst-data/run003/fastq_pass/barcode01,2025-11-01,clinical
+### The simplest samplesheet (recommended)
+
+Put a `fastq_pass/` folder next to the samplesheet and omit `fastq_dir`:
+
+```
+~/ont-mlst-analyses/2026-06_run004/
+├── samplesheet.csv
+└── fastq_pass/
+    ├── barcode01/
+    ├── barcode02/
+    └── ...
 ```
 
-The pipeline validates the samplesheet before running. Typical failures (missing
-columns, duplicate IDs, bad paths) produce clear error messages with sample IDs.
+```csv
+sample_id,run_id,barcode,sample_type
+MS1451,run004,barcode01,clinical
+MS1467,run004,barcode02,clinical
+```
+
+If you'd rather keep raw data elsewhere (e.g. `~/ont-mlst-data/run004/fastq_pass/`), either symlink it in:
+```bash
+ln -s ~/ont-mlst-data/run004/fastq_pass ./fastq_pass
+```
+or set a different template in a local `config.yaml`:
+```yaml
+paths:
+  fastq_dir_template: "~/ont-mlst-data/{run_id}/fastq_pass/{barcode}"
+```
+
+### Handling replicates and controls
+
+`sample_id` is the **technical** identifier (one row = one sequencing event,
+never repeats). `biological_id` is the **organism** — use it to tie repeated
+sequencings together.
+
+```csv
+sample_id,biological_id,run_id,barcode,sample_type
+MS1451_rep1,MS1451,run003,barcode01,clinical
+MS1451_rep2,MS1451,run004,barcode07,clinical
+POS_CTRL_run003,POS_CTRL,run003,barcode96,control
+POS_CTRL_run004,POS_CTRL,run004,barcode96,control
+```
+Two rows with the same `biological_id` are treated as replicates of the same
+isolate.
+
+### Validation
+
+The pipeline validates the samplesheet before any tool runs. Typical failures
+(missing columns, duplicate `sample_id`, bad path, empty fastq folder) produce
+an error message that names the offending sample and the exact problem.
 
 ---
 

@@ -77,6 +77,38 @@ samples = pd.read_csv(_ss_path)
 # Row-level structure (required columns, types, sample_id pattern)
 validate(samples, "workflow/schemas/samplesheet.schema.yaml")
 
+# ---- fastq_dir auto-resolution ----
+# Fill in any row that doesn't have fastq_dir from the config template.
+# Explicit fastq_dir values win. Relative paths resolve against CWD; ~
+# expands to home.
+_fastq_template = config.get("paths", {}).get("fastq_dir_template",
+                                              "fastq_pass/{barcode}")
+
+def _resolve_fastq_dir(row) -> str:
+    explicit = row.get("fastq_dir")
+    if pd.notna(explicit) and str(explicit).strip():
+        raw = str(explicit).strip()
+    else:
+        try:
+            raw = _fastq_template.format(
+                sample_id=row["sample_id"],
+                run_id=row["run_id"],
+                barcode=row["barcode"],
+            )
+        except KeyError as e:
+            raise WorkflowError(
+                f"fastq_dir_template refers to {{{e.args[0]}}}, but "
+                f"no such column exists in the samplesheet."
+            )
+    p = Path(os.path.expanduser(raw))
+    if not p.is_absolute():
+        p = Path.cwd() / p
+    return str(p)
+
+if "fastq_dir" not in samples.columns:
+    samples["fastq_dir"] = pd.NA
+samples["fastq_dir"] = samples.apply(_resolve_fastq_dir, axis=1)
+
 def _validate_samplesheet(df: pd.DataFrame) -> None:
     errs = []
 

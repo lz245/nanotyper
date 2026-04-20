@@ -9,8 +9,18 @@ properties:
     minLength: 1
     pattern: "^[A-Za-z0-9_.-]+$"
     description: >
-      Unique identifier for this sample. Letters, digits, underscore, dot,
-      hyphen only — used to form result directory names.
+      Unique identifier for THIS sequencing event (run × barcode). Used as
+      the result-folder name, so it must be unique across the whole sheet.
+      Letters, digits, underscore, dot, hyphen only.
+      For replicates/controls, suffix with _rep1, _run003, etc., and use
+      biological_id to group them.
+  biological_id:
+    type: ["string", "null"]
+    description: >
+      Optional. The underlying organism / source the sample came from.
+      Two rows with the same biological_id are treated as replicates of
+      the same isolate (e.g. a positive control sequenced across runs,
+      or a sample resequenced for validation).
   run_id:
     type: string
     minLength: 1
@@ -20,11 +30,11 @@ properties:
     minLength: 1
     description: "Nanopore barcode identifier (e.g. barcode01)."
   fastq_dir:
-    type: string
-    minLength: 1
+    type: ["string", "null"]
     description: >
-      Path to the folder of .fastq.gz files for this barcode.
-      Absolute paths recommended.
+      Optional. Path to the folder of .fastq.gz files for this barcode.
+      If omitted, it is auto-computed from paths.fastq_dir_template in
+      config.yaml. Supports ~, relative, and absolute paths.
   collection_date:
     type: ["string", "null"]
     description: "Optional. Free-text collection date; shown in the report."
@@ -36,4 +46,3 @@ required:
   - sample_id
   - run_id
   - barcode
-  - fastq_dir

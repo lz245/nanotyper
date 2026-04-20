@@ -12,6 +12,13 @@ properties:
       reference_genome:    { type: string }
       allele_db_dir:       { type: string }
       profile_file:        { type: string }
+      fastq_dir_template:
+        type: string
+        description: >
+          Template used to fill in fastq_dir for samplesheet rows that
+          don't specify one explicitly. Placeholders: {sample_id},
+          {run_id}, {barcode}. Relative paths resolve against the
+          analysis directory (cwd); ~ expands to home.
     required:
       - samplesheet
       - results_dir

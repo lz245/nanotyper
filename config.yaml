@@ -14,6 +14,10 @@ paths:
   allele_db_dir: "resources/databases/pubmlst_ecoli_achtman/alleles"
   # PubMLST ST profile table (header: ST adk fumC gyrB icd mdh purA recA clonal_complex)
   profile_file: "resources/databases/pubmlst_ecoli_achtman/profiles.txt"
+  # Used to fill in fastq_dir for samplesheet rows that don't specify one.
+  # Placeholders: {sample_id}, {run_id}, {barcode}. Relative paths resolve
+  # against your analysis directory (cwd); ~ expands to home.
+  fastq_dir_template: "fastq_pass/{barcode}"
 
 # ---- MLST scheme ----
 mlst:
