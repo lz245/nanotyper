@@ -1,0 +1,39 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "ONT-MLST samplesheet row"
+description: "One row per sequencing barcode"
+type: object
+
+properties:
+  sample_id:
+    type: string
+    minLength: 1
+    pattern: "^[A-Za-z0-9_.-]+$"
+    description: >
+      Unique identifier for this sample. Letters, digits, underscore, dot,
+      hyphen only — used to form result directory names.
+  run_id:
+    type: string
+    minLength: 1
+    description: "Sequencing run label (e.g. run003)."
+  barcode:
+    type: string
+    minLength: 1
+    description: "Nanopore barcode identifier (e.g. barcode01)."
+  fastq_dir:
+    type: string
+    minLength: 1
+    description: >
+      Path to the folder of .fastq.gz files for this barcode.
+      Absolute paths recommended.
+  collection_date:
+    type: ["string", "null"]
+    description: "Optional. Free-text collection date; shown in the report."
+  sample_type:
+    type: ["string", "null"]
+    description: "Optional. Free-text category (e.g. clinical / environmental / control)."
+
+required:
+  - sample_id
+  - run_id
+  - barcode
+  - fastq_dir

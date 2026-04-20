@@ -1,0 +1,72 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "ONT-MLST workflow configuration"
+type: object
+
+properties:
+  paths:
+    type: object
+    properties:
+      samplesheet:         { type: string }
+      results_dir:         { type: string }
+      databases_dir:       { type: string }
+      reference_genome:    { type: string }
+      allele_db_dir:       { type: string }
+      profile_file:        { type: string }
+    required:
+      - samplesheet
+      - results_dir
+      - reference_genome
+      - allele_db_dir
+      - profile_file
+
+  mlst:
+    type: object
+    properties:
+      scheme_name: { type: string }
+      loci:
+        type: array
+        items: { type: string }
+        minItems: 1
+        uniqueItems: true
+    required: [scheme_name, loci]
+
+  medaka:
+    type: object
+    properties:
+      model:   { type: string }
+      threads: { type: integer, minimum: 1 }
+    required: [model]
+
+  blast:
+    type: object
+    properties:
+      min_identity:        { type: number,  minimum: 0, maximum: 100 }
+      require_full_length: { type: boolean }
+      max_target_seqs:     { type: integer, minimum: 1 }
+
+  cutadapt:
+    type: object
+    properties:
+      error_rate:   { type: number, minimum: 0, maximum: 1 }
+      primers_file: { type: string }
+    required: [primers_file]
+
+  qc:
+    type: object
+    properties:
+      coverage_good: { type: integer, minimum: 0 }
+      coverage_warn: { type: integer, minimum: 0 }
+    required: [coverage_good, coverage_warn]
+
+  resources:
+    type: object
+    properties:
+      threads: { type: integer, minimum: 1 }
+
+required:
+  - paths
+  - mlst
+  - medaka
+  - blast
+  - cutadapt
+  - qc
