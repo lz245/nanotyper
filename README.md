@@ -9,56 +9,104 @@ A portable, reproducible Snakemake workflow that takes Oxford Nanopore
 
 ---
 
-## What you need
+## One-time setup
 
-1. A Mac or Linux computer.
-2. **mamba** (or conda). If you don't have it, install
-   [Miniforge](https://github.com/conda-forge/miniforge) — free, one-click.
-3. **snakemake** (install once, in your base env):
+1. Install the pipeline:
    ```bash
-   mamba install -n base -c conda-forge -c bioconda 'snakemake>=8'
+   git clone https://github.com/<you>/ont-mlst-snakemake.git ~/ont-mlst-snakemake
+   ~/ont-mlst-snakemake/install.sh
    ```
-
-All other tools (medaka, BLAST, cutadapt, R) are installed automatically on the first run.
+   `install.sh` checks/installs the two prerequisites (`mamba`/`conda` + `snakemake>=8`).
+2. All other tools (medaka, BLAST, cutadapt, R) are installed automatically on the first run.
 
 ---
 
-## Quick start
+## Recommended project layout
 
-```bash
-# 1. Edit samplesheet.csv — list one row per barcode.
-open samplesheet.csv          # macOS; opens in Excel/Numbers
+Keep the pipeline, your raw sequencing data, and each analysis in **separate
+directories**:
 
-# 2. Run the pipeline.
-./run.sh
+```
+~/ont-mlst-snakemake/           ← the pipeline (code, versioned in git)
+~/ont-mlst-data/                ← raw sequencing deliverables (read-only)
+    run003_2025-11-01/
+        fastq_pass/barcode01/ ...
+    run004_2026-06-15/
+        ...
+~/ont-mlst-analyses/            ← one sub-folder per analysis
+    2026-04_run003/
+        samplesheet.csv         ← you edit this
+        config.yaml             ← (optional) local overrides
+        results/                ← pipeline writes outputs here
+        logs/
+    2026-06_run004/
+        samplesheet.csv
+        results/
 ```
 
-That's it. First run installs tool environments (~10 min, one-time). Subsequent runs are fast.
+Benefits: pipeline updates (`git pull`) don't touch your data or results; each
+analysis is self-contained (zip it and send to a collaborator); multiple runs
+don't step on each other's outputs.
 
-Outputs land in `results/`:
-- `results/mlst_summary.tsv` — one row per sample, ST + alleles + QC
-- `results/mlst_report.html` — interactive report, open in any browser
+---
+
+## Running an analysis
+
+```bash
+# 1. Create an analysis folder and drop in a samplesheet
+mkdir -p ~/ont-mlst-analyses/2026-06_run004
+cd       ~/ont-mlst-analyses/2026-06_run004
+# (edit samplesheet.csv — see "The samplesheet" below)
+
+# 2. Launch the pipeline (call it from your analysis folder)
+~/ont-mlst-snakemake/run.sh -n           # dry run — shows the plan
+~/ont-mlst-snakemake/run.sh              # real run
+```
+
+Outputs land in `./results/`:
+- `mlst_summary.tsv` — one row per sample, ST + alleles + QC
+- `mlst_summary.xlsx` — same data, colour-coded for Excel
+- `mlst_report.html` — interactive report, open in any browser
 
 ---
 
 ## The samplesheet
 
-One CSV, one row per sample. Columns:
+One CSV, one row per sample:
 
 | column | required | description |
 |---|---|---|
-| `sample_id` | yes | Must be unique across the whole sheet |
-| `run_id` | yes | Sequencing run label |
+| `sample_id` | yes | Unique across the sheet. Letters/digits/_.- only |
+| `run_id` | yes | Sequencing run label (e.g. `run003`) |
 | `barcode` | yes | e.g. `barcode01` |
-| `fastq_dir` | yes | Absolute path to the barcode's folder of `.fastq.gz` files |
+| `fastq_dir` | yes | Absolute path to the barcode's `.fastq.gz` folder |
 | `collection_date` | no | Free text; shown in the report |
 | `sample_type` | no | Free text; shown in the report |
 
 Example:
 ```csv
 sample_id,run_id,barcode,fastq_dir,collection_date,sample_type
-MS1451,run003,barcode01,/data/run003/fastq_pass/barcode01,2025-11-01,clinical
+MS1451,run003,barcode01,/Users/you/ont-mlst-data/run003/fastq_pass/barcode01,2025-11-01,clinical
 ```
+
+The pipeline validates the samplesheet before running. Typical failures (missing
+columns, duplicate IDs, bad paths) produce clear error messages with sample IDs.
+
+---
+
+## Overriding pipeline defaults
+
+Drop a `config.yaml` in your analysis folder containing only the keys you want
+to change. Example:
+```yaml
+qc:
+  coverage_good: 75         # keep ST calls down to 75× primer coverage
+  coverage_warn: 30
+medaka:
+  model: r1041_e82_400bps_hac_v5.0.0   # HAC instead of SUP
+```
+Unspecified keys fall back to the pipeline defaults (see
+[`config.yaml`](config.yaml) at the pipeline root).
 
 ---
 
@@ -72,6 +120,8 @@ MS1451,run003,barcode01,/data/run003/fastq_pass/barcode01,2025-11-01,clinical
 | **LOW_COVERAGE** | Any locus has 50–99× primer coverage (allele still called) |
 | **FAIL** | Any locus has <50× coverage or no BLAST hit |
 
+Priority order when multiple flags apply: FAIL > LOW_COVERAGE > NEW_ALLELE > NEW_ST > PASS.
+
 Thresholds are tunable in `config.yaml` under `qc:`.
 
 ---
@@ -79,38 +129,45 @@ Thresholds are tunable in `config.yaml` under `qc:`.
 ## Common commands
 
 ```bash
-./run.sh                  # full run
-./run.sh -n               # dry run, show what would happen
-./run.sh -j 4             # limit to 4 cores
-./run.sh --unlock         # recover from a crashed run
-./run.sh --forceall       # re-run everything from scratch
+~/ont-mlst-snakemake/run.sh                  # full run
+~/ont-mlst-snakemake/run.sh -n               # dry run
+~/ont-mlst-snakemake/run.sh -j 4             # limit to 4 cores
+~/ont-mlst-snakemake/run.sh --unlock         # recover from a crashed run
+~/ont-mlst-snakemake/run.sh --forceall       # re-run everything from scratch
+```
+
+Tip: add an alias in your `~/.zshrc` or `~/.bashrc`:
+```bash
+alias mlst='~/ont-mlst-snakemake/run.sh'
 ```
 
 ---
 
 ## Troubleshooting
 
-**"snakemake: command not found"** → install it per *What you need* above.
+**`snakemake: command not found`** → run `~/ont-mlst-snakemake/install.sh`.
 
 **First run is slow** → correct. Conda envs are being built. Subsequent runs reuse them.
 
-**A sample has `qc_label=FAIL`** → the report shows why (no BLAST hit, low coverage, etc.).
+**Sample labelled `FAIL`** → the report's "Samples needing attention" section
+shows per-locus status dots and the exact reason (low coverage, no hit, etc.).
 
-**I want to re-run just one sample** → delete its `results/<sample_id>/` folder and run `./run.sh`.
+**Re-run just one sample** → delete `./results/<sample_id>/` and run `./run.sh`.
 
 ---
 
-## Directory layout
+## Pipeline layout (for reference)
 
 ```
 ont-mlst-snakemake/
 ├── Snakefile              ← pipeline definition
-├── config.yaml            ← paths, thresholds, MLST scheme
-├── samplesheet.csv        ← YOU edit this
-├── run.sh                 ← one-command wrapper
+├── config.yaml            ← default paths, thresholds, MLST scheme
+├── run.sh                 ← runner (call from your analysis folder)
+├── install.sh             ← one-time setup
 ├── workflow/
 │   ├── rules/             ← 7 Snakemake rule modules
 │   ├── envs/              ← 5 conda env YAMLs (auto-installed)
+│   ├── schemas/           ← JSON Schemas for samplesheet + config
 │   └── scripts/           ← call_st.py, cutadapt_coverage.py, aggregate.py, report.Rmd
 └── resources/
     └── databases/         ← PubMLST alleles, profiles, reference genome

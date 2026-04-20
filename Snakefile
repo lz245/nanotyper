@@ -4,6 +4,7 @@
 #   + parallel cutadapt primer-coverage QC
 # ==================================================================
 
+import os
 import pandas as pd
 import subprocess
 from pathlib import Path
@@ -11,7 +12,35 @@ from pathlib import Path
 from snakemake.utils import validate
 from snakemake.exceptions import WorkflowError
 
-configfile: "config.yaml"
+# Load the pipeline's bundled default config. Users can override any value by
+# placing their own config.yaml in the analysis directory and passing
+# --configfile ./config.yaml (run.sh does this automatically).
+configfile: workflow.source_path("config.yaml")
+
+# Pipeline's own directory (absolute). This is where workflow code, schemas,
+# conda envs, and bundled databases live. The user's working directory
+# (for samplesheet + results) can be somewhere else entirely.
+PIPELINE_DIR = Path(workflow.basedir).resolve()
+
+# ---- resolve pipeline-bundled paths relative to PIPELINE_DIR ----
+# (If a user writes an absolute path in their config, we leave it alone.
+# If a user writes a relative path like "resources/databases/...", we treat
+# it as relative to the pipeline, not to the current working directory.)
+def _resolve_bundled(rel_or_abs: str) -> str:
+    if not rel_or_abs:
+        return rel_or_abs
+    p = Path(rel_or_abs)
+    return str(p) if p.is_absolute() else str(PIPELINE_DIR / p)
+
+for key in ("databases_dir", "reference_genome", "allele_db_dir", "profile_file"):
+    if key in config.get("paths", {}):
+        config["paths"][key] = _resolve_bundled(config["paths"][key])
+if "cutadapt" in config and "primers_file" in config["cutadapt"]:
+    config["cutadapt"]["primers_file"] = _resolve_bundled(config["cutadapt"]["primers_file"])
+
+# Workflow-internal scripts/templates used in shell: directives must be absolute
+# so they resolve correctly when the user's cwd is an analysis folder.
+REPORT_RMD = str(PIPELINE_DIR / "workflow" / "scripts" / "report.Rmd")
 
 # ---- schema validation: catch bad inputs BEFORE any tools run ----
 validate(config, "workflow/schemas/config.schema.yaml")

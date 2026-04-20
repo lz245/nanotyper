@@ -4,7 +4,7 @@ rule report:
     input:
         summary = RESULTS + "/mlst_summary.tsv",
         long    = RESULTS + "/mlst_long.tsv",
-        rmd     = "workflow/scripts/report.Rmd"
+        rmd     = REPORT_RMD
     output:
         html = RESULTS + "/mlst_report.html"
     params:

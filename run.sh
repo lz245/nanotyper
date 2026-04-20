@@ -1,45 +1,56 @@
 #!/usr/bin/env bash
 # ------------------------------------------------------------------
-# ONT-MLST one-command runner
+# ONT-MLST runner — call this from your analysis directory.
 #
 # Usage:
-#   ./run.sh                # run the full pipeline with defaults
-#   ./run.sh -n             # dry run (show what would happen, no execution)
-#   ./run.sh -j 8           # use 8 cores
-#   ./run.sh --unlock       # unlock a stale working directory
-#   ./run.sh <any snakemake args...>
+#   cd ~/ont-mlst-analyses/<your-run-folder>
+#   ~/ont-mlst-snakemake/run.sh              # full run
+#   ~/ont-mlst-snakemake/run.sh -n           # dry run
+#   ~/ont-mlst-snakemake/run.sh -j 8         # 8 cores
+#   ~/ont-mlst-snakemake/run.sh --unlock     # recover from a crash
 #
-# Requirements (install once):
-#   - mamba or conda (https://github.com/conda-forge/miniforge)
-#   - snakemake >=8 in the base env:
-#       mamba install -n base -c conda-forge -c bioconda snakemake
+# The current working directory must contain samplesheet.csv; outputs
+# (results/, logs/) land there.
 # ------------------------------------------------------------------
 set -euo pipefail
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$HERE"
+# Where the pipeline lives (this script's directory).
+PIPELINE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Default: run with conda envs and all cores
-DEFAULT_ARGS=(--use-conda --cores all --rerun-incomplete)
+# Do NOT cd — we want to run in the user's current directory.
+CWD="$(pwd)"
 
+# ---- sanity checks ----
 if ! command -v snakemake >/dev/null 2>&1; then
-    cat >&2 <<EOF
-ERROR: 'snakemake' is not on PATH.
-
-Install it once with mamba (recommended) or conda:
-    mamba install -n base -c conda-forge -c bioconda 'snakemake>=8'
-
-Then re-run: ./run.sh
-EOF
+    echo "ERROR: 'snakemake' is not on PATH." >&2
+    echo "  Run: ${PIPELINE_DIR}/install.sh" >&2
     exit 1
 fi
 
-# Quick sanity check: samplesheet exists
-if [[ ! -f samplesheet.csv ]]; then
-    echo "ERROR: samplesheet.csv not found in $HERE" >&2
-    echo "  Edit the file to list your samples, then re-run." >&2
+if [[ ! -f "${CWD}/samplesheet.csv" ]]; then
+    echo "ERROR: samplesheet.csv not found in ${CWD}" >&2
+    echo "  This script must be run from an analysis folder that contains samplesheet.csv." >&2
+    echo "  See ${PIPELINE_DIR}/README.md for the recommended layout." >&2
     exit 1
 fi
 
-echo "[run.sh] launching: snakemake ${DEFAULT_ARGS[*]} $*"
-exec snakemake "${DEFAULT_ARGS[@]}" "$@"
+# Base args
+ARGS=(
+  --snakefile "${PIPELINE_DIR}/Snakefile"
+  --use-conda
+  --cores all
+  --rerun-incomplete
+)
+
+# If the analysis folder has its own config.yaml, layer it on top of the
+# pipeline's default. (Without --configfile, Snakemake uses the bundled
+# config.yaml at the pipeline root.)
+if [[ -f "${CWD}/config.yaml" ]]; then
+    ARGS+=(--configfile "${CWD}/config.yaml")
+fi
+
+echo "[run.sh] pipeline : ${PIPELINE_DIR}"
+echo "[run.sh] workdir  : ${CWD}"
+echo "[run.sh] launching: snakemake ${ARGS[*]} $*"
+
+exec snakemake "${ARGS[@]}" "$@"
