@@ -120,10 +120,26 @@ Behaviour:
 Aggregate outputs land in `<analysis_root>/combined/`:
 | file | contents |
 |---|---|
+| `combined_report.html` | self-contained cross-run report: status banner, per-run QC, top STs, ST × run heatmap, replicate disagreements, searchable sample table |
 | `combined_summary.tsv` / `.xlsx` | all samples across all runs, one row each, with `run_folder` column |
 | `st_distribution.tsv` | ST × run pivot — how often each ST appears per run |
 | `qc_by_run.tsv` | QC-label × run pivot — success rate per run |
 | `replicates.tsv` | (if `biological_id` used) replicates that disagree on ST |
+
+## Tools
+
+Standalone utilities under `tools/`:
+
+```bash
+# Lint all samplesheets for duplicate sample_id (exit non-zero if problems):
+tools/fix_samplesheet.py --check ~/ont-mlst-data/*/samplesheet.csv
+
+# Auto-fix duplicates (suffix with _<barcode>, keep original in biological_id):
+tools/fix_samplesheet.py --write /path/to/samplesheet.csv
+```
+
+`batch_run.sh` runs the check automatically as a pre-flight; use the write
+mode only if you want to edit outside the batch flow.
 
 Aggregate-only (after the fact, without rerunning any pipelines):
 ```bash

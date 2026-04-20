@@ -81,6 +81,22 @@ if [[ $AGGREGATE_ONLY -eq 0 ]]; then
     for r in "${runs[@]}"; do echo "    $(basename "$r")"; done
     echo
 
+    # Pre-flight samplesheet lint: duplicate sample_id is the #1 way this
+    # batch fails. Scan everything up front so the user fixes in one pass.
+    say "Linting samplesheets..."
+    sheets=()
+    for r in "${runs[@]}"; do
+        [[ -f "${r%/}/samplesheet.csv" ]] && sheets+=("${r%/}/samplesheet.csv")
+    done
+    if ! python3 "$PIPELINE_DIR/tools/fix_samplesheet.py" --check "${sheets[@]}"; then
+        err "Duplicate sample_id (or similar) found above."
+        err "Auto-fix (backup originals as .bak):"
+        err "    python3 $PIPELINE_DIR/tools/fix_samplesheet.py --write <samplesheet.csv>"
+        err "...then re-run batch_run.sh."
+        exit 1
+    fi
+    ok "All samplesheets pass lint."
+
     total_start=$(date +%s)
     n_done=0
     n_skip=0
