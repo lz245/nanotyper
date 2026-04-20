@@ -46,14 +46,16 @@ REPORT_RMD = str(PIPELINE_DIR / "workflow" / "scripts" / "report.Rmd")
 validate(config, "workflow/schemas/config.schema.yaml")
 
 # ---- pipeline version + git commit (for provenance in the report) ----
+# These must resolve against PIPELINE_DIR, not CWD — the user's analysis
+# folder is typically not the git repo and has no VERSION file.
 def _read_version() -> str:
-    p = Path("VERSION")
+    p = PIPELINE_DIR / "VERSION"
     return p.read_text().strip() if p.exists() else "dev"
 
 def _read_git_sha() -> str:
     try:
         return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
+            ["git", "-C", str(PIPELINE_DIR), "rev-parse", "--short", "HEAD"],
             stderr=subprocess.DEVNULL
         ).decode().strip()
     except Exception:
