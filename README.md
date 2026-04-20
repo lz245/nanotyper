@@ -52,23 +52,26 @@ don't step on each other's outputs.
 
 ## Daily workflow
 
-What a typical run looks like end-to-end:
+A typical run, end-to-end. Raw data stays read-only in `~/ont-mlst-data/`;
+analysis outputs live in their own folder under `~/ont-mlst-analyses/`.
 
 ```bash
-# 1. New sequencing run arrives — drop it in the data folder
-cp -r ~/Downloads/run004_2026-06-15/ ~/ont-mlst-data/
+# 1. New sequencing run arrives — drop the MinKNOW output in the data folder.
+#    Expected layout: ~/ont-mlst-data/<run>/fastq_pass/barcode01/ ...
+cp -r ~/Downloads/run004_2026-06-15 ~/ont-mlst-data/
 
-# 2. Create an analysis folder for this run
+# 2. Create a matching analysis folder for this run.
 mkdir -p ~/ont-mlst-analyses/2026-06_run004
 cd       ~/ont-mlst-analyses/2026-06_run004
 
-# 3. Write the samplesheet (use test/samplesheet.csv as a template)
-cp ~/ont-mlst-analyses/test/samplesheet.csv .
-# edit with your new sample IDs + barcodes + fastq_dir paths
+# 3. Link the raw data in, copy the samplesheet, and edit it if needed.
+ln -s ~/ont-mlst-data/2026-06_run004/fastq_pass    ./fastq_pass
+cp    ~/ont-mlst-data/2026-06_run004/samplesheet.csv ./samplesheet.csv
+# open samplesheet.csv in Excel/Numbers and tweak sample_id / sample_type etc.
 
-# 4. Go
+# 4. Go.
 ~/ont-mlst-snakemake/run.sh -n           # dry run — verify the plan
-~/ont-mlst-snakemake/run.sh              # real run
+~/ont-mlst-snakemake/run.sh -j 4         # real run, 4 parallel cores
 open results/mlst_report.html
 ```
 
@@ -76,6 +79,11 @@ Outputs land in `./results/`:
 - `mlst_summary.tsv` — one row per sample, ST + alleles + QC
 - `mlst_summary.xlsx` — same data, colour-coded for Excel
 - `mlst_report.html` — interactive report, open in any browser
+
+Why this layout:
+- Raw data is written once, never touched again → safe to back up / keep read-only
+- Each analysis folder is self-contained — zip `2026-06_run004/` to share the full record
+- Rerun with different QC thresholds? Make a second analysis folder; data stays untouched
 
 **Tip — add a shell alias** so you don't retype the full path every time:
 
