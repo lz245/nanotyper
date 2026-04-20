@@ -31,11 +31,18 @@ FLAG_BG = {
 }
 
 # ---- wide summary ----
-frames = [pd.read_csv(p, sep="\t") for p in calls_in]
+# Force sample_id (and all allele columns) to string. Otherwise pandas infers
+# numeric dtype for sheets whose sample_ids happen to be all digits, and the
+# samplesheet-vs-calls merge below silently fails with blank qc_label.
+_str_cols = {"sample_id": str}
+for _l in loci:
+    _str_cols[_l] = str
+
+frames = [pd.read_csv(p, sep="\t", dtype=_str_cols) for p in calls_in]
 wide = pd.concat(frames, ignore_index=True)
 
 # Join samplesheet metadata (keep original samplesheet columns left of wide)
-meta = pd.read_csv(samplesheet)
+meta = pd.read_csv(samplesheet, dtype={"sample_id": str})
 wide = meta.merge(wide, on="sample_id", how="left")
 
 Path(summary_out).parent.mkdir(parents=True, exist_ok=True)

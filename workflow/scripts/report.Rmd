@@ -96,12 +96,13 @@ dots_by_sample <- long_df %>%
 summary_df <- summary_df %>% left_join(dots_by_sample, by = "sample_id")
 
 total_samples <- nrow(summary_df)
-pass_samples  <- sum(summary_df$qc_label == "PASS")
-low_cov       <- sum(summary_df$qc_label == "LOW_COVERAGE")
-new_st        <- sum(summary_df$qc_label == "NEW_ST")
-new_allele    <- sum(summary_df$qc_label == "NEW_ALLELE")
-fail          <- sum(summary_df$qc_label == "FAIL")
-pass_rate     <- 100 * pass_samples / total_samples
+# na.rm protects against merge gaps / missing values from upstream
+pass_samples  <- sum(summary_df$qc_label == "PASS",          na.rm = TRUE)
+low_cov       <- sum(summary_df$qc_label == "LOW_COVERAGE",  na.rm = TRUE)
+new_st        <- sum(summary_df$qc_label == "NEW_ST",        na.rm = TRUE)
+new_allele    <- sum(summary_df$qc_label == "NEW_ALLELE",    na.rm = TRUE)
+fail          <- sum(summary_df$qc_label == "FAIL",          na.rm = TRUE)
+pass_rate     <- if (total_samples > 0) 100 * pass_samples / total_samples else 0
 unique_sts    <- summary_df %>%
                    filter(qc_label %in% c("PASS","LOW_COVERAGE")) %>%
                    pull(ST) %>% unique() %>% length()
