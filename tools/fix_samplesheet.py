@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Lint and auto-fix ONT-MLST samplesheets.
+Lint and auto-fix nanotyper samplesheets.
 
 Detects duplicate sample_id values and, in --write mode, rewrites them
 as `<sample_id>_<barcode>`, preserving the original in a `biological_id`

@@ -1,11 +1,26 @@
-# ONT-MLST: Nanopore Multi-Locus Sequence Typing
+# nanotyper — Nanopore multilocus sequence typing
 
 A portable, reproducible Snakemake workflow that takes Oxford Nanopore
-`fastq_pass/` folders and produces MLST calls + an interactive HTML report.
+`fastq_pass/` folders of MLST amplicons and produces sequence-type (ST) calls,
+per-locus QC, and an interactive HTML report.
 
-**Target users:** scientists with no bioinformatics background.
+**Target users:** microbiology labs with no bioinformatics support.
 **Platforms:** macOS (Intel + Apple Silicon) and Linux.
-**Scheme:** *E. coli* Achtman (7 loci). Up to 96 barcodes per run.
+**Scheme (v1.0):** *Escherichia coli* Achtman 7-locus MLST. Up to 96 barcodes per run.
+**Sibling tool:** [nano16s](https://github.com/lz245/nano16s) (full-length 16S profiling) from the same lab.
+
+> **Relationship to the published method.** nanotyper is the successor to the
+> ONT-MLST workflow described in Jia et al. (2024), *Poultry Science*
+> 103:104067, [doi:10.1016/j.psj.2024.104067](https://doi.org/10.1016/j.psj.2024.104067).
+> It is a re-implementation, not the code used in that paper: it uses current
+> medaka models on all reads (the paper used medaka 1.3.2 on the first 4,000
+> reads of R9.4 data), adds primer-coverage QC with explicit PASS/FAIL tiers,
+> and supports 96-plex batch processing with cross-run aggregation.
+>
+> **Prior work with a similar name.** Two unrelated tools are called nanoMLST:
+> Liou et al. 2020 (*Microbial Genomics*, MRSA, dual-barcode) and García-Pérez
+> et al. 2025 (*MicrobiologyOpen*, ESKAPE+E, Krocus-based). nanotyper is not
+> derived from either.
 
 ---
 
@@ -13,8 +28,8 @@ A portable, reproducible Snakemake workflow that takes Oxford Nanopore
 
 1. Install the pipeline:
    ```bash
-   git clone https://github.com/<you>/ont-mlst-snakemake.git ~/ont-mlst-snakemake
-   ~/ont-mlst-snakemake/install.sh
+   git clone https://github.com/lz245/nanotyper.git ~/nanotyper
+   ~/nanotyper/install.sh
    ```
    `install.sh` checks/installs the two prerequisites (`mamba`/`conda` + `snakemake>=8`).
 2. All other tools (medaka, BLAST, cutadapt, R) are installed automatically on the first run.
@@ -23,101 +38,59 @@ A portable, reproducible Snakemake workflow that takes Oxford Nanopore
 
 ## Recommended project layout
 
-Keep the pipeline, your raw sequencing data, and each analysis in **separate
-directories**:
+Keep the pipeline (code) separate from your projects (data + results). One
+project folder holds everything for one study, so it can be moved, backed up,
+or zipped and sent to a collaborator as a single self-contained record.
 
 ```
-~/ont-mlst-snakemake/           ← the pipeline (code, versioned in git)
-~/ont-mlst-data/                ← raw sequencing deliverables (read-only)
-    run003_2025-11-01/
-        fastq_pass/barcode01/ ...
-    run004_2026-06-15/
-        ...
-~/ont-mlst-analyses/            ← one sub-folder per analysis
-    2026-04_run003/
-        samplesheet.csv         ← you edit this
-        config.yaml             ← (optional) local overrides
-        results/                ← pipeline writes outputs here
-        logs/
-    2026-06_run004/
-        samplesheet.csv
-        results/
+~/nanotyper/                              ← the pipeline (code, versioned in git)
+
+~/nanotyper-projects/                     ← all your nanotyper studies
+    2026-04_APEC-MLST-11-runs/            ← one folder per study
+        data/                             ← raw MinKNOW output, read-only
+            run003/fastq_pass/barcode01/ ...
+            run003/samplesheet.csv        ← you write this (see below)
+            run004/ ...
+        analyses/                         ← created by batch_run.sh
+            run003/samplesheet.csv
+            run003/fastq_pass -> ../../data/run003/fastq_pass
+            run003/results/               ← pipeline outputs
+            run004/ ...
+        combined/                         ← cross-run report + tables
+        batch.log
+    2026-09_next-study/
+        data/  analyses/  combined/
 ```
-
-Benefits: pipeline updates (`git pull`) don't touch your data or results; each
-analysis is self-contained (zip it and send to a collaborator); multiple runs
-don't step on each other's outputs.
-
----
-
-## Daily workflow
-
-A typical run, end-to-end. Raw data stays read-only in `~/ont-mlst-data/`;
-analysis outputs live in their own folder under `~/ont-mlst-analyses/`.
-
-```bash
-# 1. New sequencing run arrives — drop the MinKNOW output in the data folder.
-#    Expected layout: ~/ont-mlst-data/<run>/fastq_pass/barcode01/ ...
-cp -r ~/Downloads/run004_2026-06-15 ~/ont-mlst-data/
-
-# 2. Create a matching analysis folder for this run.
-mkdir -p ~/ont-mlst-analyses/2026-06_run004
-cd       ~/ont-mlst-analyses/2026-06_run004
-
-# 3. Link the raw data in, copy the samplesheet, and edit it if needed.
-ln -s ~/ont-mlst-data/2026-06_run004/fastq_pass    ./fastq_pass
-cp    ~/ont-mlst-data/2026-06_run004/samplesheet.csv ./samplesheet.csv
-# open samplesheet.csv in Excel/Numbers and tweak sample_id / sample_type etc.
-
-# 4. Go.
-~/ont-mlst-snakemake/run.sh -n           # dry run — verify the plan
-~/ont-mlst-snakemake/run.sh -j 4         # real run, 4 parallel cores
-open results/mlst_report.html
-```
-
-Outputs land in `./results/`:
-- `mlst_summary.tsv` — one row per sample, ST + alleles + QC
-- `mlst_summary.xlsx` — same data, colour-coded for Excel
-- `mlst_report.html` — interactive report, open in any browser
 
 Why this layout:
-- Raw data is written once, never touched again → safe to back up / keep read-only
-- Each analysis folder is self-contained — zip `2026-06_run004/` to share the full record
+- Raw data is written once, never touched again → safe to keep read-only and back up
+- Symlinks are relative, so the project folder survives being moved or archived
+- Pipeline updates (`git pull` in `~/nanotyper/`) never touch data or results
 - Rerun with different QC thresholds? Make a second analysis folder; data stays untouched
-
-**Tip — add a shell alias** so you don't retype the full path every time:
-
-```bash
-echo 'alias mlst="~/ont-mlst-snakemake/run.sh"' >> ~/.zshrc
-source ~/.zshrc
-# then just:  mlst          (or  mlst -n  for a dry run)
-```
 
 ---
 
-## Batch mode — many runs at once
+## Batch mode — the normal way to run
 
-If you have several sequencing runs sitting in `~/ont-mlst-data/`, one
-command runs the pipeline on each and then aggregates a cross-run view:
-
-```bash
-~/ont-mlst-snakemake/batch_run.sh
-```
-
-Defaults: `<data_root>=~/ont-mlst-data`, `<analysis_root>=~/ont-mlst-analyses`.
-Override with positional args:
+Put each sequencing run under `data/<run>/` with its `samplesheet.csv`, then:
 
 ```bash
-~/ont-mlst-snakemake/batch_run.sh /path/to/data /path/to/analyses
+~/nanotyper/batch_run.sh ~/nanotyper-projects/2026-04_APEC-MLST-11-runs
 ```
 
 Behaviour:
-- Runs sequentially (one at a time, each uses all cores). 11 runs × ~1 h ≈ overnight.
+- Runs sequentially (one run at a time; `-j 8` to give each run 8 cores, default 4). 11 runs × ~1 h ≈ overnight.
 - **Resumable** — skips any run whose `results/mlst_report.html` already exists. Kill and restart safely.
-- **Fail-fast** — if any run fails, the batch stops so you can fix that run and re-run `batch_run.sh` to resume.
-- Progress log at `~/ont-mlst-analyses/batch.log` (append-only).
+- **Fail-fast** — if any run fails, the batch stops so you can fix that run and re-run to resume.
+- Progress log at `<project>/batch.log` (append-only).
 
-Aggregate outputs land in `<analysis_root>/combined/`:
+Aggregate-only (after the fact, without rerunning any pipelines):
+```bash
+~/nanotyper/batch_run.sh --aggregate ~/nanotyper-projects/2026-04_APEC-MLST-11-runs
+```
+
+Cross-run outputs land in `<project>/combined/`:
+
 | file | contents |
 |---|---|
 | `combined_report.html` | self-contained cross-run report: status banner, per-run QC, top STs, ST × run heatmap, replicate disagreements, searchable sample table |
@@ -126,25 +99,48 @@ Aggregate outputs land in `<analysis_root>/combined/`:
 | `qc_by_run.tsv` | QC-label × run pivot — success rate per run |
 | `replicates.tsv` | (if `biological_id` used) replicates that disagree on ST |
 
+## Single run
+
+To run one analysis folder by hand (e.g. to re-run with different thresholds):
+
+```bash
+mkdir -p ~/nanotyper-projects/<project>/analyses/<run>
+cd       ~/nanotyper-projects/<project>/analyses/<run>
+ln -s ../../data/<run>/fastq_pass ./fastq_pass
+cp    ../../data/<run>/samplesheet.csv ./samplesheet.csv
+
+~/nanotyper/run.sh -n           # dry run — verify the plan
+~/nanotyper/run.sh -j 4         # real run, 4 parallel cores
+open results/mlst_report.html
+```
+
+Outputs in `./results/`:
+- `mlst_summary.tsv` — one row per sample, ST + alleles + QC
+- `mlst_summary.xlsx` — same data, colour-coded for Excel
+- `mlst_report.html` — interactive report, open in any browser
+
+**Tip — add a shell alias** so you don't retype the full path every time:
+
+```bash
+echo 'alias nanotyper="~/nanotyper/run.sh"' >> ~/.zshrc
+source ~/.zshrc
+# then just:  nanotyper          (or  nanotyper -n  for a dry run)
+```
+
 ## Tools
 
 Standalone utilities under `tools/`:
 
 ```bash
 # Lint all samplesheets for duplicate sample_id (exit non-zero if problems):
-tools/fix_samplesheet.py --check ~/ont-mlst-data/*/samplesheet.csv
+~/nanotyper/tools/fix_samplesheet.py --check ~/nanotyper-projects/<project>/data/*/samplesheet.csv
 
 # Auto-fix duplicates (suffix with _<barcode>, keep original in biological_id):
-tools/fix_samplesheet.py --write /path/to/samplesheet.csv
+~/nanotyper/tools/fix_samplesheet.py --write /path/to/samplesheet.csv
 ```
 
 `batch_run.sh` runs the check automatically as a pre-flight; use the write
 mode only if you want to edit outside the batch flow.
-
-Aggregate-only (after the fact, without rerunning any pipelines):
-```bash
-~/ont-mlst-snakemake/batch_run.sh --aggregate
-```
 
 ---
 
@@ -167,7 +163,7 @@ One CSV, one row per sequencing event (run × barcode).
 Put a `fastq_pass/` folder next to the samplesheet and omit `fastq_dir`:
 
 ```
-~/ont-mlst-analyses/2026-06_run004/
+data/run004/
 ├── samplesheet.csv
 └── fastq_pass/
     ├── barcode01/
@@ -181,14 +177,11 @@ MS1451,run004,barcode01,clinical
 MS1467,run004,barcode02,clinical
 ```
 
-If you'd rather keep raw data elsewhere (e.g. `~/ont-mlst-data/run004/fastq_pass/`), either symlink it in:
-```bash
-ln -s ~/ont-mlst-data/run004/fastq_pass ./fastq_pass
-```
-or set a different template in a local `config.yaml`:
+If the reads live somewhere else, either symlink them in or set a different
+template in a local `config.yaml`:
 ```yaml
 paths:
-  fastq_dir_template: "~/ont-mlst-data/{run_id}/fastq_pass/{barcode}"
+  fastq_dir_template: "/Volumes/lab-nas/minknow/{run_id}/fastq_pass/{barcode}"
 ```
 
 ### Handling replicates and controls
@@ -217,7 +210,7 @@ an error message that names the offending sample and the exact problem.
 
 ## Overriding pipeline defaults
 
-Drop a `config.yaml` in your analysis folder containing only the keys you want
+Drop a `config.yaml` in the analysis folder containing only the keys you want
 to change. Example:
 ```yaml
 qc:
@@ -228,6 +221,9 @@ medaka:
 ```
 Unspecified keys fall back to the pipeline defaults (see
 [`config.yaml`](config.yaml) at the pipeline root).
+
+**Medaka model:** the default targets R10.4.1 flow cells (`r1041_*`). Pick the
+model that matches your flow cell chemistry and basecalling mode.
 
 ---
 
@@ -250,55 +246,56 @@ Thresholds are tunable in `config.yaml` under `qc:`.
 ## Common commands
 
 ```bash
-~/ont-mlst-snakemake/run.sh                  # full run
-~/ont-mlst-snakemake/run.sh -n               # dry run
-~/ont-mlst-snakemake/run.sh -j 4             # limit to 4 cores
-~/ont-mlst-snakemake/run.sh --unlock         # recover from a crashed run
-~/ont-mlst-snakemake/run.sh --forceall       # re-run everything from scratch
-```
-
-Tip: add an alias in your `~/.zshrc` or `~/.bashrc`:
-```bash
-alias mlst='~/ont-mlst-snakemake/run.sh'
+~/nanotyper/run.sh                  # full run (inside an analysis folder)
+~/nanotyper/run.sh -n               # dry run
+~/nanotyper/run.sh -j 4             # limit to 4 cores
+~/nanotyper/run.sh --unlock         # recover from a crashed run
+~/nanotyper/run.sh --forceall       # re-run everything from scratch
 ```
 
 ---
 
 ## Troubleshooting
 
-**`snakemake: command not found`** → run `~/ont-mlst-snakemake/install.sh`.
+**`snakemake: command not found`** → run `~/nanotyper/install.sh`.
 
 **First run is slow** → correct. Conda envs are being built. Subsequent runs reuse them.
 
 **Sample labelled `FAIL`** → the report's "Samples needing attention" section
 shows per-locus status dots and the exact reason (low coverage, no hit, etc.).
 
-**Re-run just one sample** → delete `./results/<sample_id>/` and run `./run.sh`.
+**Re-run just one sample** → delete `./results/<sample_id>/` and run `~/nanotyper/run.sh`.
 
 ---
 
 ## Pipeline layout (for reference)
 
 ```
-ont-mlst-snakemake/
+nanotyper/
 ├── Snakefile              ← pipeline definition
 ├── config.yaml            ← default paths, thresholds, MLST scheme
-├── run.sh                 ← runner (call from your analysis folder)
+├── run.sh                 ← single-run runner (call from an analysis folder)
+├── batch_run.sh           ← project-level batch runner + cross-run aggregation
 ├── install.sh             ← one-time setup
 ├── workflow/
 │   ├── rules/             ← 7 Snakemake rule modules
 │   ├── envs/              ← 5 conda env YAMLs (auto-installed)
 │   ├── schemas/           ← JSON Schemas for samplesheet + config
-│   └── scripts/           ← call_st.py, cutadapt_coverage.py, aggregate.py, report.Rmd
+│   └── scripts/           ← call_st.py, cutadapt_coverage.py, aggregate.py, batch_aggregate.py, report.Rmd
+├── docs/decisions/        ← design decision records
 └── resources/
-    └── databases/         ← PubMLST alleles, profiles, reference genome
+    └── databases/         ← PubMLST alleles, profiles, reference genes, primers
 ```
 
 ---
 
-## Credits
+## Citing
 
-PubMLST *E. coli* Achtman scheme (Wirth et al. 2006).
-Medaka (Oxford Nanopore Technologies).
-BLAST+ (NCBI).
-cutadapt (Martin 2011).
+See [`CITATION.cff`](CITATION.cff). Please also cite the underlying tools:
+PubMLST *E. coli* Achtman scheme (Wirth et al. 2006; Jolley et al. 2018),
+medaka (Oxford Nanopore Technologies), BLAST+ (NCBI), cutadapt (Martin 2011),
+Snakemake (Mölder et al. 2021).
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).

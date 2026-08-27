@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------
-# ONT-MLST Snakemake workflow configuration
+# nanotyper Snakemake workflow configuration
 # ------------------------------------------------------------------
 
 # ---- paths (relative to the directory where you run snakemake) ----

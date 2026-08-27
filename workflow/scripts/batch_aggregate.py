@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Cross-run aggregator for ONT-MLST.
+Cross-run aggregator for nanotyper.
 
 Concatenates every per-run mlst_summary.tsv into one wide table, then
 produces:
@@ -286,7 +286,7 @@ def write_html_report(output, combined, qc_by_run, st_pivot, disagree_df):
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ONT-MLST — cross-run report</title>
+<title>nanotyper — cross-run report</title>
 <style>
   body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
          margin: 0; padding: 0 24px 60px; color: #222; max-width: 1200px; margin: 0 auto; }}
@@ -315,7 +315,7 @@ def write_html_report(output, combined, qc_by_run, st_pivot, disagree_df):
 </head>
 <body>
 
-<h1>ONT-MLST — cross-run report</h1>
+<h1>nanotyper — cross-run report</h1>
 
 <div class="banner">
   <div class="verdict">{banner_icon} &nbsp; {verdict}</div>
@@ -360,7 +360,7 @@ $(function() {{
 </script>
 
 <footer>
-  ONT-MLST pipeline · cross-run aggregate · {now_str}
+  nanotyper · cross-run aggregate · {now_str}
 </footer>
 </body>
 </html>

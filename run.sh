@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ------------------------------------------------------------------
-# ONT-MLST runner — call this from your analysis directory.
+# nanotyper runner — call this from one analysis folder.
 #
 # Usage:
-#   cd ~/ont-mlst-analyses/<your-run-folder>
-#   ~/ont-mlst-snakemake/run.sh              # full run
-#   ~/ont-mlst-snakemake/run.sh -n           # dry run
-#   ~/ont-mlst-snakemake/run.sh -j 8         # 8 cores
-#   ~/ont-mlst-snakemake/run.sh --unlock     # recover from a crash
+#   cd ~/nanotyper-projects/<project>/analyses/<run>
+#   ~/nanotyper/run.sh              # full run
+#   ~/nanotyper/run.sh -n           # dry run
+#   ~/nanotyper/run.sh -j 8         # 8 cores
+#   ~/nanotyper/run.sh --unlock     # recover from a crash
 #
 # The current working directory must contain samplesheet.csv; outputs
 # (results/, logs/) land there.

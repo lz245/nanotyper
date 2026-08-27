@@ -1,4 +1,4 @@
-name: ont-mlst-blast
+name: nanotyper-blast
 channels:
   - conda-forge
   - bioconda

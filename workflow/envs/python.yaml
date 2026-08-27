@@ -1,4 +1,4 @@
-name: ont-mlst-python
+name: nanotyper-python
 channels:
   - conda-forge
   - bioconda

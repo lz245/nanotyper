@@ -1,5 +1,5 @@
 # ==================================================================
-# ONT-MLST Snakemake workflow
+# nanotyper Snakemake workflow
 #   Nanopore amplicon -> medaka consensus -> BLAST -> MLST call
 #   + parallel cutadapt primer-coverage QC
 # ==================================================================

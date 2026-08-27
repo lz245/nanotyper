@@ -1,4 +1,4 @@
-name: ont-mlst-medaka
+name: nanotyper-medaka
 channels:
   - conda-forge
   - bioconda

@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
 # ------------------------------------------------------------------
-# ONT-MLST one-time setup
+# nanotyper one-time setup
 #
 # Checks/installs the two prerequisites:
 #   1. mamba or conda  (package manager — we do NOT auto-install this;
 #                       we tell you how if missing)
 #   2. snakemake >=8   (in your base conda env — we DO auto-install)
 #
-# After this finishes:
-#   1. Edit samplesheet.csv
-#   2. ./run.sh
+# After this finishes, follow "Recommended project layout" in README.md.
 # ------------------------------------------------------------------
 set -euo pipefail
 
@@ -99,14 +97,10 @@ else
   ok "snakemake installed ($(snakemake --version 2>/dev/null))"
 fi
 
-# ---------------- 4) Sanity: databases + samplesheet ----------------
+# ---------------- 4) Sanity: bundled databases ----------------
 [[ -d resources/databases ]] \
   && ok "resources/databases/ present" \
   || warn "resources/databases/ not found — set this up before running (see README.md)"
-
-[[ -f samplesheet.csv ]] \
-  && ok "samplesheet.csv present" \
-  || warn "samplesheet.csv missing — copy the example and edit with your samples"
 
 # ---------------- 5) Done ----------------
 cat <<EOF
@@ -115,13 +109,17 @@ cat <<EOF
   ✓ Setup complete.
 ────────────────────────────────────────────────────────────────
 
-Next steps:
-  1. Edit samplesheet.csv        — one row per barcode
-  2. ./run.sh -n                 — dry run (shows the plan, no execution)
-  3. ./run.sh                    — real run
-                                   (first run auto-installs tool envs, ~15 min)
+Next steps (see README.md, "Recommended project layout"):
+  1. Create a project folder:   ~/nanotyper-projects/<project>/data/<run>/fastq_pass/...
+  2. Put a samplesheet.csv next to each run's fastq_pass/
+  3. Batch:  ~/nanotyper/batch_run.sh ~/nanotyper-projects/<project>
+     or one run at a time:
+       mkdir -p ~/nanotyper-projects/<project>/analyses/<run> && cd there
+       ~/nanotyper/run.sh -n        — dry run (shows the plan, no execution)
+       ~/nanotyper/run.sh           — real run
+                                      (first run auto-installs tool envs, ~15 min)
 
-Outputs land in results/:
+Outputs land in results/ of each analysis folder:
   - results/mlst_summary.tsv     — wide, one row per sample
   - results/mlst_summary.xlsx    — same data, colour-coded for Excel
   - results/mlst_report.html     — interactive report (open in any browser)

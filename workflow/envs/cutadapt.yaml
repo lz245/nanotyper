@@ -1,4 +1,4 @@
-name: ont-mlst-cutadapt
+name: nanotyper-cutadapt
 channels:
   - conda-forge
   - bioconda

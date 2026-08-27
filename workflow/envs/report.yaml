@@ -1,4 +1,4 @@
-name: ont-mlst-report
+name: nanotyper-report
 channels:
   - conda-forge
 dependencies:
