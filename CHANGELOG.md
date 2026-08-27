@@ -5,6 +5,10 @@ All notable changes to nanotyper are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Zenodo DOI badge and `doi:` / `identifiers:` in `CITATION.cff` (concept DOI 10.5281/zenodo.22131409,
+  v1.0.0 DOI 10.5281/zenodo.22131410).
+
 ## [1.0.0] — 2026-08-27
 
 First full release. The pipeline, demo, tests and CI shipped in 0.9.0; what makes this 1.0
