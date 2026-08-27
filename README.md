@@ -10,6 +10,8 @@ per-locus QC, and an interactive HTML report.
 **Target users:** microbiology labs with no bioinformatics support.
 **Platforms:** macOS (Intel + Apple Silicon) and Linux.
 **Scheme (v1.0):** *Escherichia coli* Achtman 7-locus MLST. Up to 96 barcodes per run.
+**Supported chemistry:** R10.4.1 and later. Older flow cells (R9.4.1, R10.4) are
+detected and flagged, but not supported — see "Basecalling model" below.
 **Sibling tool:** [nano16s](https://github.com/lz245/nano16s) (full-length 16S profiling) from the same lab.
 
 > **Relationship to the published method.** nanotyper is the successor to the
@@ -271,7 +273,8 @@ Unspecified keys fall back to the pipeline defaults (see
 [`config.yaml`](config.yaml) at the pipeline root).
 
 **Medaka model:** the default targets R10.4.1 flow cells (`r1041_*`). Pick the
-model that matches your flow cell chemistry and basecalling mode.
+`r1041_*` model that matches your basecalling mode (fast / hac / sup). Older
+chemistries are out of scope (see "Basecalling model").
 
 ---
 
@@ -282,12 +285,47 @@ model that matches your flow cell chemistry and basecalling mode.
 | **PASS** | All 7 loci known alleles, full coverage, ST found in PubMLST |
 | **NEW_ST** | All 7 loci known alleles, but the 7-allele combination is novel |
 | **NEW_ALLELE** | At least one locus has a hit <100% identity or not full length |
-| **LOW_COVERAGE** | Any locus has 50–99× primer coverage (allele still called) |
-| **FAIL** | Any locus has <50× coverage or no BLAST hit |
+| **LOW_COVERAGE** | Any locus has 20–99× primer coverage (allele still called) |
+| **FAIL** | Any locus has <20× coverage or no BLAST hit |
 
 Priority order when multiple flags apply: FAIL > LOW_COVERAGE > NEW_ALLELE > NEW_ST > PASS.
 
-Thresholds are tunable in `config.yaml` under `qc:`.
+Thresholds are tunable in `config.yaml` under `qc:`, and the defaults are
+calibrated rather than assumed: on 480 R10.4.1/SUP-v5 samples, locus calls that
+miss a known allele run at ~32 % below 20×, ~20 % from 20–100×, and ~5 % above
+200× (`docs/qc-calibration.md`, `docs/decisions/0012-qc-thresholds.md`).
+
+### Locus balance
+
+The report also flags **primer imbalance**. If a locus takes a small share of a
+sample's on-target reads (<3 % by default, `qc.min_locus_share_pct`), that locus
+caps the sample's QC no matter how deep the run is. In this lab's *E. coli* data
+*mdh* sits at ~2.5 % of reads, so ~3,900 reads per barcode are needed for *mdh*
+alone to reach 100×. The fix is the primer ratio at the bench (Jia et al. 2024,
+Fig. 2), not a lower threshold — so the report tells you the required read count
+instead of hiding the problem.
+
+### Basecalling model
+
+Each sample's `basecall_model_version_id` is read from the FASTQ headers, recorded
+in the summary and `provenance.yaml`, and compared with the medaka model in use.
+A mismatch is flagged, because reads basecalled on one chemistry and polished with a
+model for another keep motif-specific errors that BLAST reports as novel alleles.
+
+**nanotyper targets R10.4.1 and later only.** Legacy R9.4.1 and R10.4 data are
+deliberately out of scope: medaka 2.x no longer ships those model families, Oxford
+Nanopore has retired the chemistries, and carrying a second polishing environment for
+them would add a maintenance burden with no future users. In the lab dataset behind
+`docs/qc-calibration.md`, legacy runs produced imperfect BLAST matches at 12–21 % of
+locus calls even at ≥200× depth, against 5 % on R10.4.1 — so their allele calls should
+be treated as provisional. If you must analyse such data, re-basecall it with a current
+model first.
+
+To re-derive all of this on your own project:
+
+```bash
+~/nanotyper/tools/qc_calibration.py ~/nanotyper-projects/<project> --out qc-calibration.md
+```
 
 ---
 
@@ -327,7 +365,7 @@ nanotyper/
 ├── install.sh             ← one-time setup
 ├── schemes/
 │   └── ecoli_achtman/     ← scheme pack (see "Scheme packs")
-├── tools/                 ← fetch_pubmlst.py, fix_samplesheet.py
+├── tools/                 ← fetch_pubmlst.py, fix_samplesheet.py, qc_calibration.py, make_demo.py
 ├── workflow/
 │   ├── rules/             ← Snakemake rule modules (one per step)
 │   ├── envs/              ← 5 conda env YAMLs (auto-installed, shared across analyses)

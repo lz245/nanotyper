@@ -12,7 +12,13 @@ amplicon_bp: {adk: 584, fumC: 737, gyrB: 880, icd: 878, mdh: 932, purA: 820, rec
 # Medaka reference: the 7 target genes from E. coli O157:H7 str. Sakai (NC_002695), one record per locus
 reference: reference.fasta
 primers: primers.csv
-# QC thresholds (reads carrying both primers of a locus); config.yaml qc: overrides these
+# QC thresholds (reads carrying both primers of a locus); config.yaml qc: overrides these.
+# Calibrated on 480 R10.4.1 / SUP-v5 samples: single-mismatch consensus errors run at
+# ~32% of locus calls below 20x, ~20% from 20-100x, and ~5% above 200x.
+# See docs/qc-calibration.md and docs/decisions/0012-qc-thresholds.md.
 qc_defaults:
   coverage_good: 100
-  coverage_warn: 50
+  coverage_warn: 20
+  # Flag a locus receiving less than this percentage of a sample's on-target reads:
+  # a primer-balance problem, which no depth threshold can fix.
+  min_locus_share_pct: 3

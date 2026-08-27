@@ -18,6 +18,9 @@ params:
   scheme: "unknown"
   organism: ""
   db_date: "unknown"
+  cov_good: 100
+  cov_warn: 20
+  medaka_model: "unknown"
 ---
 
 ```{r setup, include=FALSE}
@@ -68,7 +71,7 @@ qc_counts <- summary_df %>%
   mutate(pct = 100 * n / sum(n))
 
 # Per-locus dot colour for a sample: FAIL-red > NEW_ALLELE-pink > LOW-orange > PASS-green
-dot_colour <- function(flag, coverage, cov_good = 100, cov_warn = 50) {
+dot_colour <- function(flag, coverage, cov_good = params$cov_good, cov_warn = params$cov_warn) {
   dplyr::case_when(
     flag == "no_hit"        ~ "#dc3545",
     coverage < cov_warn     ~ "#dc3545",
@@ -135,6 +138,11 @@ if (pass_rate >= 80) {
 ```
 
 ```{css, echo=FALSE}
+/* Callout for QC advisories (primer balance, basecalling model) */
+.alert-box {
+  background: #fff8e1; border-left: 4px solid #fd7e14; border-radius: 6px;
+  padding: 14px 18px; margin: 14px 0; font-size: 0.95em; line-height: 1.5;
+}
 /* Banner */
 .status-banner {
   color: white; padding: 26px 30px; border-radius: 10px;
@@ -237,11 +245,15 @@ tagList(
 
 <div class="info-panel">
 **QC labels:**
-<span class="qb qb-pass">✓ PASS</span> all 7 loci known at 100% identity, ≥100× coverage, ST in PubMLST &nbsp;·&nbsp;
-<span class="qb qb-newst">NEW_ST</span> novel 7-allele combination &nbsp;·&nbsp;
-<span class="qb qb-low">LOW_COVERAGE</span> 50–99× on at least one locus &nbsp;·&nbsp;
-<span class="qb qb-newal">NEW_ALLELE</span> imperfect BLAST match on at least one locus &nbsp;·&nbsp;
-<span class="qb qb-fail">✗ FAIL</span> <50× coverage or no hit
+```{r qc-legend, results="asis", echo=FALSE}
+cat(sprintf(paste0(
+ '<span class="qb qb-pass">&#10003; PASS</span> all %d loci known at 100%% identity, &ge;%d&times; coverage, ST in PubMLST &nbsp;&middot;&nbsp;\n',
+ '<span class="qb qb-newst">NEW_ST</span> novel %d-allele combination &nbsp;&middot;&nbsp;\n',
+ '<span class="qb qb-low">LOW_COVERAGE</span> %d&ndash;%d&times; on at least one locus &nbsp;&middot;&nbsp;\n',
+ '<span class="qb qb-newal">NEW_ALLELE</span> imperfect BLAST match on at least one locus &nbsp;&middot;&nbsp;\n',
+ '<span class="qb qb-fail">&#10007; FAIL</span> &lt;%d&times; coverage or no hit'),
+ length(LOCI), params$cov_good, length(LOCI), params$cov_warn, params$cov_good - 1, params$cov_warn))
+```
 </div>
 
 ---
@@ -255,9 +267,9 @@ locus_stats <- long_df %>%
   group_by(locus) %>%
   summarise(
     n_samples      = n(),
-    n_high_cov     = sum(coverage >= 100),
-    n_mid_cov      = sum(coverage >= 50 & coverage < 100),
-    n_low_cov      = sum(coverage < 50),
+    n_high_cov     = sum(coverage >= params$cov_good),
+    n_mid_cov      = sum(coverage >= params$cov_warn & coverage < params$cov_good),
+    n_low_cov      = sum(coverage < params$cov_warn),
     n_known        = sum(flag == "known"),
     n_new_allele   = sum(flag == "new_allele"),
     n_no_hit       = sum(flag == "no_hit"),
@@ -272,13 +284,15 @@ locus_stats <- long_df %>%
   ) %>%
   arrange(locus)
 
+band_good <- sprintf("\u2265%d\u00d7 (good)", params$cov_good)
+band_warn <- sprintf("%d\u2013%d\u00d7 (warn)", params$cov_warn, params$cov_good - 1)
+band_fail <- sprintf("<%d\u00d7 (fail)", params$cov_warn)
+
 cov_long <- locus_stats %>%
-  select(locus, `≥100× (good)` = pct_high,
-         `50–99× (warn)`       = pct_mid,
-         `<50× (fail)`         = pct_low) %>%
+  select(locus, pct_high, pct_mid, pct_low) %>%
+  rename(!!band_good := pct_high, !!band_warn := pct_mid, !!band_fail := pct_low) %>%
   pivot_longer(-locus, names_to = "band", values_to = "pct") %>%
-  mutate(band = factor(band,
-                       levels = c("≥100× (good)","50–99× (warn)","<50× (fail)")))
+  mutate(band = factor(band, levels = c(band_good, band_warn, band_fail)))
 
 plot_ly(cov_long,
         y = ~locus, x = ~pct, color = ~band,
@@ -304,7 +318,7 @@ msg <- if (length(weak_loci) == 0 && length(flagged_loci) == 0) {
 } else {
   paste0(
     if (length(weak_loci) > 0) sprintf(
-      "**%s** had <50× coverage in >25%% of samples — check the primer stock, amplification conditions, or read-length filtering for this locus. ",
+      sprintf("**%%s** had <%d&times; coverage in >25%%%% of samples — check the primer stock, amplification conditions, or read-length filtering for this locus. ", params$cov_warn),
       paste(weak_loci, collapse = ", ")) else "",
     if (length(flagged_loci) > 0) sprintf(
       "Imperfect BLAST matches were observed for **%s**; these may be genuinely novel alleles or basecalling artefacts worth verifying on a higher-accuracy model.",
@@ -321,10 +335,14 @@ cat('<div class="interp">', msg, '</div>', sep = "")
 Prioritised list — FAIL and NEW_ALLELE first. LOW_COVERAGE samples still have an ST call but one or more loci are undercovered.
 
 The **Loci** column shows a quick 7-dot summary (adk · fumC · gyrB · icd · mdh · purA · recA). Hover a dot for details.
-<span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#28a745;vertical-align:middle;border:1px solid rgba(0,0,0,0.1)"></span> known & ≥100× &nbsp;·&nbsp;
-<span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#fd7e14;vertical-align:middle;border:1px solid rgba(0,0,0,0.1)"></span> known & 50–99× &nbsp;·&nbsp;
-<span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#e83e8c;vertical-align:middle;border:1px solid rgba(0,0,0,0.1)"></span> new allele &nbsp;·&nbsp;
-<span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#dc3545;vertical-align:middle;border:1px solid rgba(0,0,0,0.1)"></span> <50× / no hit
+```{r dot-legend, results="asis", echo=FALSE}
+cat(sprintf(paste0(
+  '<span style="display:inline-block;width:11px;height:11px;border-radius:50%%;background:#28a745;vertical-align:middle;border:1px solid rgba(0,0,0,0.1)"></span> known &amp; &ge;%d&times; &nbsp;&middot;&nbsp;\n',
+  '<span style="display:inline-block;width:11px;height:11px;border-radius:50%%;background:#fd7e14;vertical-align:middle;border:1px solid rgba(0,0,0,0.1)"></span> known &amp; %d&ndash;%d&times; &nbsp;&middot;&nbsp;\n',
+  '<span style="display:inline-block;width:11px;height:11px;border-radius:50%%;background:#e83e8c;vertical-align:middle;border:1px solid rgba(0,0,0,0.1)"></span> new allele &nbsp;&middot;&nbsp;\n',
+  '<span style="display:inline-block;width:11px;height:11px;border-radius:50%%;background:#dc3545;vertical-align:middle;border:1px solid rgba(0,0,0,0.1)"></span> &lt;%d&times; / no hit'),
+  params$cov_good, params$cov_warn, params$cov_good - 1, params$cov_warn))
+```
 
 ```{r attention-table}
 attn <- summary_df %>%
@@ -383,6 +401,65 @@ plot_ly(qc_counts %>% filter(n > 0),
         text = ~sprintf("%s: %d samples (%.1f%%)", qc_label, n, pct)) %>%
   layout(title = list(text = "QC label distribution", font = list(size = 14)),
          showlegend = TRUE, margin = list(t = 40, b = 20))
+```
+
+## Locus balance and basecalling model
+
+```{r locus-balance, fig.height=4}
+share_cols <- paste0(LOCI, "_share_pct")
+if (all(share_cols %in% names(summary_df))) {
+  share_long <- summary_df %>%
+    select(sample_id, all_of(share_cols)) %>%
+    pivot_longer(-sample_id, names_to = "locus", values_to = "share") %>%
+    mutate(locus = sub("_share_pct$", "", locus))
+
+  med <- share_long %>% group_by(locus) %>%
+    summarise(median_share = median(share, na.rm = TRUE), .groups = "drop") %>%
+    arrange(median_share)
+
+  starved <- med %>% filter(median_share < 5)
+
+  p <- plot_ly(share_long, x = ~locus, y = ~share, type = "box",
+               color = ~locus, colors = viridis::viridis(length(LOCI)),
+               hoverinfo = "y") %>%
+    layout(title = list(text = "Share of on-target reads per locus", font = list(size = 14)),
+           yaxis = list(title = "% of the sample's on-target reads"),
+           xaxis = list(title = ""), showlegend = FALSE)
+  p
+} else {
+  cat("Locus-share columns not present in this summary.")
+}
+```
+
+```{r locus-balance-note, results="asis"}
+if (all(share_cols %in% names(summary_df)) && nrow(starved) > 0) {
+  cat(sprintf(
+    paste0("<div class='alert-box'><strong>Primer balance:</strong> %s ",
+           "%s a median of %s%% of on-target reads. A starved locus caps the whole ",
+           "sample's QC no matter how deep the run is: at a %s%% share, roughly %s reads ",
+           "per barcode are needed for that locus to reach %d&times;. Rebalancing the primer ",
+           "ratio at the bench fixes this; lowering the threshold does not.</div>"),
+    paste(starved$locus, collapse = ", "),
+    ifelse(nrow(starved) == 1, "takes", "take"),
+    paste(sprintf("%.1f", starved$median_share), collapse = "/"),
+    sprintf("%.1f", min(starved$median_share)),
+    format(round(params$cov_good / (min(starved$median_share) / 100), -2), big.mark = ","),
+    params$cov_good))
+}
+
+if ("model_note" %in% names(summary_df)) {
+  bad <- summary_df %>% filter(!is.na(model_note), model_note != "")
+  if (nrow(bad) > 0) {
+    models <- unique(sub("^basecall_model_mismatch:", "", bad$model_note))
+    cat(sprintf(
+      paste0("<div class='alert-box'><strong>Basecalling model mismatch (%d of %d samples):</strong> ",
+             "%s. nanotyper targets R10.4.1 and later; reads basecalled on an older chemistry and ",
+             "polished with a current medaka model retain motif-specific errors that look like novel ",
+             "alleles, so allele calls for these samples are provisional. Re-basecall with a current ",
+             "model, or exclude them.</div>"),
+      nrow(bad), nrow(summary_df), paste(models, collapse = "; ")))
+  }
+}
 ```
 
 ## ST frequency
@@ -548,7 +625,9 @@ long_df %>%
 
 **Allele calling** — consensus contigs are BLASTed against each locus's PubMLST allele FASTA. A locus is *known* if the best hit covers the full allele length at 100% identity; otherwise flagged as a potential *new allele*.
 
-**Primer coverage QC** — cutadapt scans reads for the 5' (`-g`) and 3' (`-a`) primers at error rate 0.1; reads with both primers are counted as the coverage metric. <50× triggers FAIL for that locus; 50–99× triggers LOW_COVERAGE.
+**Primer coverage QC** — cutadapt scans reads for the 5' (`-g`) and 3' (`-a`) primers at error rate 0.1; reads with both primers are counted as the coverage metric. Below `r params$cov_warn`× triggers FAIL for that locus; `r params$cov_warn`–`r params$cov_good - 1`× triggers LOW_COVERAGE. Thresholds are configurable (`qc:` in `config.yaml`) and the defaults are calibrated in `docs/qc-calibration.md`.
+
+**Basecalling model** — each sample's `basecall_model_version_id` is read from the FASTQ headers and compared with the medaka model in use (`r params$medaka_model`); a mismatch is flagged above, because polishing reads with a model for a different chemistry leaves motif-specific errors that resemble novel alleles.
 
 **ST assignment** — the 7 called alleles are joined to the PubMLST profile table. Exact match → ST; otherwise `NEW_ST`.
 

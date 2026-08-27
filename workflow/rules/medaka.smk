@@ -8,7 +8,8 @@ rule merge_fastq:
         # semantic via `directory()` on the input path.
         lambda wc: samples.loc[wc.sample, "fastq_dir"]
     output:
-        fastq = temp(RESULTS + "/{sample}/medaka/input.fastq.gz")
+        fastq = temp(RESULTS + "/{sample}/medaka/input.fastq.gz"),
+        model = RESULTS + "/{sample}/medaka/basecall_model.txt"
     log:
         "logs/merge_fastq/{sample}.log"
     shell:
@@ -22,6 +23,15 @@ rule merge_fastq:
         fi
         mkdir -p "$(dirname {output.fastq})"
         cat "${{files[@]}}" > {output.fastq} 2> {log}
+
+        # Record the basecalling model from the read headers
+        # (MinKNOW/Dorado write basecall_model_version_id=...; older Guppy output
+        # may not, hence "unknown"). A model that does not match the medaka model
+        # leaves motif-specific errors that look like novel alleles -- see
+        # docs/decisions/0012-qc-thresholds.md.
+        header=$( (gzip -dc "${{files[0]}}" 2>/dev/null || true) | head -n 1 )
+        model=$(printf '%s' "$header" | grep -o 'basecall_model_version_id=[^[:space:]]*' | cut -d= -f2 || true)
+        printf '%s\n' "${{model:-unknown}}" > {output.model}
         """
 
 rule medaka_consensus:

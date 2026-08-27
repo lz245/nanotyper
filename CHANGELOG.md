@@ -5,6 +5,27 @@ All notable changes to nanotyper are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- **QC threshold `coverage_warn` 50 → 20** (`coverage_good` unchanged at 100): a locus at
+  20–99× is now `LOW_COVERAGE` with its tentative ST shown, not `FAIL`. Calibrated on 480
+  R10.4.1/SUP-v5 samples — see `docs/qc-calibration.md` and `docs/decisions/0012-qc-thresholds.md`.
+  **Labels from earlier runs change; re-run before quoting PASS rates.**
+- Every coverage threshold shown in the HTML report now follows `config.yaml` instead of
+  being hard-coded.
+
+### Added
+- Locus-balance QC: `<locus>_share_pct`, `locus_balance_note` (threshold
+  `qc.min_locus_share_pct`, default 3 %), `share_pct` in the long table, and a report panel
+  that converts the weakest locus's share into the reads per barcode needed to reach `coverage_good`.
+- **Supported chemistry stated explicitly: R10.4.1 and later.** Legacy R9.4.1 / R10.4 data are
+  detected and flagged as provisional rather than supported (see `docs/decisions/0012-qc-thresholds.md`).
+- Basecalling-model detection: `basecall_model_version_id` from the FASTQ headers is recorded
+  per sample (`basecall_model`), checked against the medaka model (`model_note`), reported, and
+  written to `provenance.yaml`.
+- `tools/qc_calibration.py` — regenerates `docs/qc-calibration.md` (locus share, call quality vs
+  depth overall and by chemistry, recurrent mismatch positions, candidate threshold rules) from
+  any finished project folder.
+
 ## [0.9.0] — 2026-08-27 — public pre-release
 
 First public version, published as a **release candidate**: the pipeline, demo,

@@ -20,6 +20,30 @@ alleles = {m.group(1): int(m.group(2)) for m in re.finditer(r"^\s+(\w+): (\d+) a
 
 scheme = yaml.safe_load(Path(snakemake.input.scheme).read_text())
 
+# ---- basecalling models actually seen in the reads ----
+# A model from a different chemistry than the medaka model leaves motif-specific
+# errors that look like novel alleles (docs/decisions/0012-qc-thresholds.md).
+basecall = {}
+for f in snakemake.input.basecall:
+    f = Path(f)
+    try:
+        basecall[f.parent.parent.name] = f.read_text().strip() or "unknown"
+    except OSError:
+        basecall[f.parent.parent.name] = "unknown"
+
+
+def _family(model):
+    m = (model or "").lower()
+    for fam in ("r1041", "r10.4.1", "r104", "r10.4", "r941", "r9.4.1"):
+        if fam in m:
+            return fam.replace(".", "")
+    return "unknown"
+
+
+_medaka_family = _family(p.medaka_model)
+_mismatched = sorted(s for s, m in basecall.items()
+                     if _family(m) not in ("unknown", _medaka_family))
+
 # ---- pinned tool versions from the conda env files ----
 tools = {}
 for env_file in snakemake.input.envs:
@@ -47,6 +71,12 @@ record = {
         "access_restriction": grab(r"^# Restriction: (.+)$", "not recorded"),
         "alleles": alleles,
         "total_sts": int(grab(r"^\s+Total STs: (\d+)", "0")),
+    },
+    "basecalling": {
+        "models_seen": sorted(set(basecall.values())),
+        "per_sample": dict(sorted(basecall.items())),
+        "medaka_model_family": _medaka_family,
+        "chemistry_mismatch_samples": _mismatched,
     },
     "parameters": {
         "medaka_model": p.medaka_model,

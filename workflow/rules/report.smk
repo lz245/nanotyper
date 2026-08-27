@@ -12,7 +12,10 @@ rule report:
         commit   = PIPELINE_COMMIT,
         scheme   = SCHEME_NAME,
         organism = SCHEME["organism"],
-        db_date  = DB_DATE
+        db_date  = DB_DATE,
+        cov_good = config["qc"]["coverage_good"],
+        cov_warn = config["qc"]["coverage_warn"],
+        medaka_model = config["medaka"]["model"]
     log:
         "logs/report.log"
     conda:
@@ -27,7 +30,10 @@ rule report:
                           commit  = '{params.commit}', \
                           scheme  = '{params.scheme}', \
                           organism = '{params.organism}', \
-                          db_date = '{params.db_date}'), \
+                          db_date = '{params.db_date}', \
+                          cov_good = {params.cov_good}, \
+                          cov_warn = {params.cov_warn}, \
+                          medaka_model = '{params.medaka_model}'), \
             output_file = '$(pwd)/{output.html}', \
             intermediates_dir = tempdir(), \
             knit_root_dir = tempdir())" \

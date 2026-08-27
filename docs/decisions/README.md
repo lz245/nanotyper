@@ -17,3 +17,4 @@ built the way it is; the changelog records *what* shipped.
 | 0009 | 2026-08-26 | PubMLST database snapshot policy |
 | 0010 | 2026-08-27 | Demo dataset and continuous integration |
 | 0011 | 2026-08-27 | First public release: v0.9.0 pre-release, v1.0.0 after validation |
+| 0012 | 2026-08-27 | QC thresholds, locus balance, basecalling-model detection |
