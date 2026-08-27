@@ -15,6 +15,9 @@ params:
   long: ""
   version: "dev"
   commit: "no-git"
+  scheme: "unknown"
+  organism: ""
+  db_date: "unknown"
 ---
 
 ```{r setup, include=FALSE}
@@ -565,5 +568,5 @@ sessionInfo()
 <div style="color:#64748b; font-size:0.9em; text-align:center; margin: 30px 0 15px 0; border-top: 1px solid #e2e8f0; padding-top: 15px;">
   nanotyper <strong>v`r params$version`</strong> · commit <code>`r params$commit`</code> · report generated `r format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z")`
   <br>
-  Samplesheet: <code>`r basename(params$summary)`</code> · <em>E. coli</em> Achtman 7-locus scheme
+  Scheme: <code>`r params$scheme`</code> (<em>`r params$organism`</em>) · PubMLST snapshot <code>`r params$db_date`</code> · full record in <code>results/provenance.yaml</code>
 </div>

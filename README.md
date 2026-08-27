@@ -208,6 +208,35 @@ an error message that names the offending sample and the exact problem.
 
 ---
 
+## Scheme packs
+
+All organism-specific material lives in one directory per scheme under
+`schemes/`; `config.yaml` selects it with `scheme: ecoli_achtman`.
+
+```
+schemes/ecoli_achtman/
+├── scheme.yaml        ← organism, PubMLST database + scheme id, loci, amplicon sizes, QC defaults
+├── reference.fasta    ← the 7 target genes (medaka reference)
+├── primers.csv        ← forward/reverse primer per locus (primer-coverage QC)
+└── pubmlst/           ← downloaded, not committed: alleles/<locus>.fasta, profiles.txt, database_info.txt
+```
+
+`install.sh` downloads the PubMLST snapshot once. To inspect or refresh it:
+
+```bash
+~/nanotyper/tools/fetch_pubmlst.py ecoli_achtman --check     # date and allele/ST counts
+~/nanotyper/tools/fetch_pubmlst.py ecoli_achtman --update    # re-download (records the new date)
+```
+
+Every analysis writes `results/provenance.yaml` (pipeline version and commit,
+scheme, PubMLST snapshot date and counts, medaka model, pinned tool versions),
+and the report footer shows the scheme and snapshot date. Refreshing the
+snapshot can change `NEW_ST` / `NEW_ALLELE` labels because PubMLST keeps adding
+records — see `docs/decisions/0009-database-snapshot-policy.md`.
+
+Adding another organism means adding one scheme pack directory (see
+`CONTRIBUTING.md`); nothing else in the pipeline changes.
+
 ## Overriding pipeline defaults
 
 Drop a `config.yaml` in the analysis folder containing only the keys you want
@@ -273,18 +302,19 @@ shows per-locus status dots and the exact reason (low coverage, no hit, etc.).
 ```
 nanotyper/
 ├── Snakefile              ← pipeline definition
-├── config.yaml            ← default paths, thresholds, MLST scheme
+├── config.yaml            ← defaults: scheme selection, thresholds, medaka model
 ├── run.sh                 ← single-run runner (call from an analysis folder)
 ├── batch_run.sh           ← project-level batch runner + cross-run aggregation
 ├── install.sh             ← one-time setup
+├── schemes/
+│   └── ecoli_achtman/     ← scheme pack (see "Scheme packs")
+├── tools/                 ← fetch_pubmlst.py, fix_samplesheet.py
 ├── workflow/
-│   ├── rules/             ← 7 Snakemake rule modules
-│   ├── envs/              ← 5 conda env YAMLs (auto-installed)
-│   ├── schemas/           ← JSON Schemas for samplesheet + config
-│   └── scripts/           ← call_st.py, cutadapt_coverage.py, aggregate.py, batch_aggregate.py, report.Rmd
-├── docs/decisions/        ← design decision records
-└── resources/
-    └── databases/         ← PubMLST alleles, profiles, reference genes, primers
+│   ├── rules/             ← Snakemake rule modules (one per step)
+│   ├── envs/              ← 5 conda env YAMLs (auto-installed, shared across analyses)
+│   ├── schemas/           ← JSON Schemas for samplesheet, config, scheme pack
+│   └── scripts/           ← call_st.py, cutadapt_coverage.py, aggregate.py, batch_aggregate.py, provenance.py, report.Rmd
+└── docs/decisions/        ← design decision records
 ```
 
 ---

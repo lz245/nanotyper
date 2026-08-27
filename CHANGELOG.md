@@ -12,6 +12,17 @@ All notable changes to nanotyper are documented here. The format follows
 - `install.sh` no longer expects a `samplesheet.csv` inside the pipeline directory.
 
 ### Added
+- **Scheme packs**: all organism-specific material now lives in `schemes/<name>/`
+  (`scheme.yaml`, `reference.fasta`, `primers.csv`, downloaded `pubmlst/`); `config.yaml`
+  selects `scheme: ecoli_achtman`. `resources/databases` symlink removed — a fresh clone
+  can run after one `tools/fetch_pubmlst.py ecoli_achtman`.
+- `tools/fetch_pubmlst.py`: downloads/refreshes a scheme's PubMLST alleles and profiles and
+  writes `database_info.txt` with date, counts, and server access restriction.
+- `results/provenance.yaml` in every analysis (pipeline version + commit, scheme, PubMLST
+  snapshot date and counts, medaka model, pinned tool versions); report footer shows scheme
+  and snapshot date.
+- Shared conda environment location (`<pipeline>/.snakemake/conda`, override with
+  `NANOTYPER_CONDA_PREFIX`) so environments are built once, not per analysis folder.
 - `LICENSE` (MIT), `CITATION.cff`, `CONTRIBUTING.md`, repo-level `CLAUDE.md`, and `docs/decisions/` design records.
 - `.gitignore` rules for session backups, raw reads, and derived BLAST/minimap2 index files.
 

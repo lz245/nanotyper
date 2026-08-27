@@ -8,8 +8,11 @@ rule report:
     output:
         html = RESULTS + "/mlst_report.html"
     params:
-        version = PIPELINE_VERSION,
-        commit  = PIPELINE_COMMIT
+        version  = PIPELINE_VERSION,
+        commit   = PIPELINE_COMMIT,
+        scheme   = SCHEME_NAME,
+        organism = SCHEME["organism"],
+        db_date  = DB_DATE
     log:
         "logs/report.log"
     conda:
@@ -21,7 +24,10 @@ rule report:
             params = list(summary = '$(pwd)/{input.summary}', \
                           long    = '$(pwd)/{input.long}', \
                           version = '{params.version}', \
-                          commit  = '{params.commit}'), \
+                          commit  = '{params.commit}', \
+                          scheme  = '{params.scheme}', \
+                          organism = '{params.organism}', \
+                          db_date = '{params.db_date}'), \
             output_file = '$(pwd)/{output.html}', \
             intermediates_dir = tempdir(), \
             knit_root_dir = tempdir())" \
