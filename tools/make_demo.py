@@ -8,7 +8,9 @@ USAGE
 
 The manifest (test/demo/manifest.tsv) has one row per demo barcode:
     barcode  source_dir  n_reads  seed
-Reads from every *.fastq.gz in source_dir are pooled, n_reads are drawn
+source_dir may contain $NANOTYPER_RAW, which must point at the lab's raw-data
+root (export NANOTYPER_RAW=/path/to/raw). Reads from every *.fastq.gz in
+source_dir are pooled, n_reads are drawn
 without replacement with random.Random(seed) (all reads if fewer exist), and
 written to test/demo/fastq_pass/<barcode>/<barcode>_demo.fastq.gz.
 
@@ -20,6 +22,7 @@ from __future__ import annotations
 import argparse
 import csv
 import gzip
+import os
 import random
 import sys
 from pathlib import Path
@@ -47,7 +50,9 @@ def main() -> int:
 
     rows = list(csv.DictReader(open(a.manifest), delimiter="\t"))
     for r in rows:
-        src = Path(r["source_dir"]).expanduser()
+        if "$NANOTYPER_RAW" in r["source_dir"] and not os.environ.get("NANOTYPER_RAW"):
+            sys.exit("ERROR: manifest uses $NANOTYPER_RAW but it is not set (export NANOTYPER_RAW=/path/to/raw)")
+        src = Path(os.path.expandvars(r["source_dir"])).expanduser()
         files = sorted(src.glob("*.fastq.gz"))
         if not files:
             sys.exit(f"ERROR: no *.fastq.gz in {src}")
@@ -57,8 +62,9 @@ def main() -> int:
         out_dir = a.out / r["barcode"]
         out_dir.mkdir(parents=True, exist_ok=True)
         out = out_dir / f"{r['barcode']}_demo.fastq.gz"
-        with gzip.open(out, "wt", compresslevel=9) as fh:
-            fh.writelines(picked)
+        # mtime=0 keeps the gzip header constant so rebuilds are byte-identical
+        with open(out, "wb") as raw, gzip.GzipFile(fileobj=raw, mode="wb", compresslevel=9, mtime=0) as gz:
+            gz.write("".join(picked).encode())
         print(f"{r['barcode']}: {n:5d} of {len(pool):5d} reads (seed {r['seed']}) -> {out} ({out.stat().st_size/1e6:.2f} MB)")
     return 0
 

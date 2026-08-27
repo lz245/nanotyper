@@ -1,5 +1,8 @@
 # nanotyper — Nanopore multilocus sequence typing
 
+[![CI](https://github.com/lz245/nanotyper/actions/workflows/ci.yml/badge.svg)](https://github.com/lz245/nanotyper/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A portable, reproducible Snakemake workflow that takes Oxford Nanopore
 `fastq_pass/` folders of MLST amplicons and produces sequence-type (ST) calls,
 per-locus QC, and an interactive HTML report.
