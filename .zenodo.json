@@ -1,0 +1,37 @@
+{
+  "upload_type": "software",
+  "access_right": "open",
+  "title": "nanotyper: Nanopore amplicon multilocus sequence typing",
+  "description": "<p>A Snakemake workflow that calls multilocus sequence types from Oxford Nanopore amplicon sequencing of MLST housekeeping genes: per-locus medaka consensus, BLAST allele assignment against a pinned PubMLST snapshot, primer-coverage QC with explicit PASS/NEW_ST/NEW_ALLELE/LOW_COVERAGE/FAIL tiers, and an interactive HTML report. Runs on an ordinary laptop or workstation; batch mode processes up to 96 barcodes per run across many runs with cross-run aggregation and replicate checks. Organism-specific material lives in scheme packs; version 1.0 ships the <em>Escherichia coli</em> Achtman 7-locus scheme. Every analysis writes a provenance record tying its calls to the pipeline version, scheme, database snapshot and tool versions.</p>",
+  "creators": [
+    {
+      "name": "Zhang, Li",
+      "affiliation": "Mississippi State University",
+      "orcid": "0000-0002-3933-5794"
+    }
+  ],
+  "keywords": [
+    "nanopore",
+    "MLST",
+    "multilocus sequence typing",
+    "Escherichia coli",
+    "amplicon sequencing",
+    "PubMLST",
+    "Snakemake",
+    "bacterial typing",
+    "avian pathogenic Escherichia coli"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "10.1016/j.psj.2024.104067",
+      "relation": "cites",
+      "scheme": "doi",
+      "resource_type": "publication-article"
+    },
+    {
+      "identifier": "https://github.com/lz245/nanotyper",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}

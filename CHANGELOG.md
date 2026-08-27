@@ -5,6 +5,12 @@ All notable changes to nanotyper are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-08-27
+
+First full release. The pipeline, demo, tests and CI shipped in 0.9.0; what makes this 1.0
+is that the QC thresholds are now calibrated against data rather than assumed, the supported
+chemistry is stated, and the calls are validated and documented.
+
 ### Changed
 - **QC threshold `coverage_warn` 50 → 20** (`coverage_good` unchanged at 100): a locus at
   20–99× is now `LOW_COVERAGE` with its tentative ST shown, not `FAIL`. Calibrated on 480
