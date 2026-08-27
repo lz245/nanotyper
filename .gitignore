@@ -1,11 +1,18 @@
 # Snakemake working directory (conda envs, job metadata, logs)
 .snakemake/
 
-# Pipeline outputs
+# Pipeline outputs (never commit results or raw reads)
 results/
 logs/
 run.log
 *.log
+*.fastq
+*.fastq.gz
+
+# Claude Code / editor session files
+.session-backup*
+*.jsonl
+RESUME_SESSION.md
 
 # OS cruft
 .DS_Store
@@ -22,9 +29,20 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Conda local
-envs/*/
+# Derived index files (rebuilt by the pipeline)
+*.ndb
+*.nhr
+*.nin
+*.njs
+*.nog
+*.nos
+*.not
+*.nsq
+*.ntf
+*.nto
+*.mmi
+*.fai
 
-# The resources/databases/ symlink points outside the repo — don't commit it.
-# If you later want databases tracked, remove this line and commit real files.
+# The resources/databases/ symlink points outside the repo — replaced by
+# scheme packs in a later step. Do not commit it.
 resources/databases
