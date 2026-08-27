@@ -27,7 +27,7 @@ rule merge_fastq:
 rule medaka_consensus:
     input:
         fastq = RESULTS + "/{sample}/medaka/input.fastq.gz",
-        ref   = config["paths"]["reference_genome"]
+        ref   = SCHEME_REFERENCE
     output:
         consensus = RESULTS + "/{sample}/consensus/{sample}_consensus.fasta"
     params:

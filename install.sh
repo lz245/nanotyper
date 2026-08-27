@@ -97,10 +97,21 @@ else
   ok "snakemake installed ($(snakemake --version 2>/dev/null))"
 fi
 
-# ---------------- 4) Sanity: bundled databases ----------------
-[[ -d resources/databases ]] \
-  && ok "resources/databases/ present" \
-  || warn "resources/databases/ not found — set this up before running (see README.md)"
+# ---------------- 4) Scheme pack database (PubMLST snapshot) ----------------
+# The default scheme pack needs its PubMLST allele/profile snapshot. Download it
+# once here (needs internet); the pipeline refuses to start without it.
+SCHEME="$(python3 -c "import yaml; print(yaml.safe_load(open('config.yaml'))['scheme'])" 2>/dev/null || echo ecoli_achtman)"
+if python3 tools/fetch_pubmlst.py "$SCHEME" --check >/dev/null 2>&1; then
+  ok "PubMLST snapshot present for scheme '$SCHEME'"
+  python3 tools/fetch_pubmlst.py "$SCHEME" --check | head -1
+else
+  say "Downloading PubMLST snapshot for scheme '$SCHEME' (one-time, ~10 MB)..."
+  if python3 tools/fetch_pubmlst.py "$SCHEME"; then
+    ok "PubMLST snapshot downloaded"
+  else
+    warn "Download failed. Re-run later:  python3 $HERE/tools/fetch_pubmlst.py $SCHEME"
+  fi
+fi
 
 # ---------------- 5) Done ----------------
 cat <<EOF

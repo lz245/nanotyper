@@ -5,7 +5,7 @@
 rule cutadapt_coverage:
     input:
         fastq   = RESULTS + "/{sample}/medaka/input.fastq.gz",
-        primers = config["cutadapt"]["primers_file"]
+        primers = SCHEME_PRIMERS
     output:
         tsv = RESULTS + "/{sample}/coverage/{sample}_locus_coverage.tsv"
     params:

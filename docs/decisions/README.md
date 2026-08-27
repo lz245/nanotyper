@@ -14,3 +14,4 @@ built the way it is; the changelog records *what* shipped.
 | 0006 | 2026-08-26 | Record keeping |
 | 0007 | 2026-08-26 | Positioning against prior art |
 | 0008 | 2026-08-26 | Project-folder layout for data and results |
+| 0009 | 2026-08-26 | PubMLST database snapshot policy |

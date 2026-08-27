@@ -4,8 +4,8 @@
 rule blast_one_locus:
     input:
         consensus = RESULTS + "/{sample}/consensus/{sample}_consensus.fasta",
-        allele_db = config["paths"]["allele_db_dir"] + "/{locus}.fasta",
-        ndb       = config["paths"]["allele_db_dir"] + "/{locus}.fasta.ndb"
+        allele_db = ALLELE_DB_DIR + "/{locus}.fasta",
+        ndb       = ALLELE_DB_DIR + "/{locus}.fasta.ndb"
     output:
         tsv = RESULTS + "/{sample}/blast/{sample}_{locus}.tsv"
     params:

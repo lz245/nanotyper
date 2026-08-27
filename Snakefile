@@ -22,21 +22,52 @@ configfile: workflow.source_path("config.yaml")
 # (for samplesheet + results) can be somewhere else entirely.
 PIPELINE_DIR = Path(workflow.basedir).resolve()
 
-# ---- resolve pipeline-bundled paths relative to PIPELINE_DIR ----
-# (If a user writes an absolute path in their config, we leave it alone.
-# If a user writes a relative path like "resources/databases/...", we treat
-# it as relative to the pipeline, not to the current working directory.)
-def _resolve_bundled(rel_or_abs: str) -> str:
-    if not rel_or_abs:
-        return rel_or_abs
-    p = Path(rel_or_abs)
-    return str(p) if p.is_absolute() else str(PIPELINE_DIR / p)
+# ---- scheme pack ----
+# Everything organism-specific comes from schemes/<scheme>/scheme.yaml
+# (docs/decisions/0003-scheme-packs.md). Paths below are derived, never
+# configured by hand.
+SCHEMES_DIR = Path(config.get("schemes_dir") or (PIPELINE_DIR / "schemes")).expanduser()
+SCHEME_NAME = config["scheme"]
+SCHEME_DIR  = SCHEMES_DIR / SCHEME_NAME
+_scheme_yaml = SCHEME_DIR / "scheme.yaml"
+if not _scheme_yaml.exists():
+    _available = sorted(p.name for p in SCHEMES_DIR.glob("*/scheme.yaml")) if SCHEMES_DIR.exists() else []
+    raise WorkflowError(
+        f"Scheme pack '{SCHEME_NAME}' not found: {_scheme_yaml}\n"
+        f"  Available scheme packs in {SCHEMES_DIR}: {_available or 'none'}"
+    )
+import yaml as _yaml
+SCHEME = _yaml.safe_load(_scheme_yaml.read_text())
+validate(SCHEME, "workflow/schemas/scheme.schema.yaml")
 
-for key in ("databases_dir", "reference_genome", "allele_db_dir", "profile_file"):
-    if key in config.get("paths", {}):
-        config["paths"][key] = _resolve_bundled(config["paths"][key])
-if "cutadapt" in config and "primers_file" in config["cutadapt"]:
-    config["cutadapt"]["primers_file"] = _resolve_bundled(config["cutadapt"]["primers_file"])
+SCHEME_REFERENCE = str(SCHEME_DIR / SCHEME["reference"])
+SCHEME_PRIMERS   = str(SCHEME_DIR / SCHEME["primers"])
+PUBMLST_DIR      = SCHEME_DIR / "pubmlst"
+ALLELE_DB_DIR    = str(PUBMLST_DIR / "alleles")
+PROFILE_FILE     = str(PUBMLST_DIR / "profiles.txt")
+DB_INFO_FILE     = str(PUBMLST_DIR / "database_info.txt")
+
+for _f in (SCHEME_REFERENCE, SCHEME_PRIMERS):
+    if not Path(_f).exists():
+        raise WorkflowError(f"Scheme pack '{SCHEME_NAME}' is missing {_f}")
+
+_missing_db = [str(PUBMLST_DIR / "profiles.txt")] if not Path(PROFILE_FILE).exists() else []
+_missing_db += [f"{ALLELE_DB_DIR}/{l}.fasta" for l in SCHEME["loci"] if not Path(f"{ALLELE_DB_DIR}/{l}.fasta").exists()]
+if _missing_db:
+    raise WorkflowError(
+        f"PubMLST snapshot for scheme '{SCHEME_NAME}' is missing or incomplete:\n  - "
+        + "\n  - ".join(_missing_db)
+        + f"\nDownload it once with:\n  python3 {PIPELINE_DIR}/tools/fetch_pubmlst.py {SCHEME_NAME}"
+    )
+
+import re as _re
+_m = _re.search(r"^# Downloaded: (\S+)", Path(DB_INFO_FILE).read_text(), _re.M) if Path(DB_INFO_FILE).exists() else None
+DB_DATE = _m.group(1) if _m else "unknown"
+
+# QC thresholds: scheme defaults, overridden by config qc:
+_qc = dict(SCHEME.get("qc_defaults", {}))
+_qc.update(config.get("qc", {}))
+config["qc"] = _qc
 
 # Workflow-internal scripts/templates used in shell: directives must be absolute
 # so they resolve correctly when the user's cwd is an analysis folder.
@@ -159,7 +190,7 @@ _validate_samplesheet(samples)
 samples = samples.set_index("sample_id", drop=False)
 SAMPLES = samples.index.tolist()
 
-LOCI = config["mlst"]["loci"]
+LOCI = list(SCHEME["loci"])
 RESULTS = config["paths"]["results_dir"]
 
 # ---- helper: fastq_dir for a given sample ----
@@ -171,7 +202,8 @@ rule all:
     input:
         f"{RESULTS}/mlst_summary.tsv",
         f"{RESULTS}/mlst_summary.xlsx",
-        f"{RESULTS}/mlst_report.html"
+        f"{RESULTS}/mlst_report.html",
+        f"{RESULTS}/provenance.yaml"
 
 # ---- rule modules ----
 include: "workflow/rules/references.smk"
@@ -181,3 +213,4 @@ include: "workflow/rules/call_st.smk"
 include: "workflow/rules/cutadapt.smk"
 include: "workflow/rules/aggregate.smk"
 include: "workflow/rules/report.smk"
+include: "workflow/rules/provenance.smk"

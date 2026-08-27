@@ -1,0 +1,18 @@
+# Scheme pack: Escherichia coli Achtman 7-locus MLST
+# Everything organism-specific lives in this directory. See docs/decisions/0003-scheme-packs.md
+name: ecoli_achtman
+organism: "Escherichia coli"
+description: "Achtman 7-locus MLST scheme (Wirth et al. 2006), hosted at PubMLST"
+pubmlst:
+  database: pubmlst_escherichia_seqdef
+  scheme_id: 1
+loci: [adk, fumC, gyrB, icd, mdh, purA, recA]
+# Expected amplicon sizes (bp) with the primers in primers.csv (Jia et al. 2024, Table 1)
+amplicon_bp: {adk: 584, fumC: 737, gyrB: 880, icd: 878, mdh: 932, purA: 820, recA: 734}
+# Medaka reference: the 7 target genes from E. coli O157:H7 str. Sakai (NC_002695), one record per locus
+reference: reference.fasta
+primers: primers.csv
+# QC thresholds (reads carrying both primers of a locus); config.yaml qc: overrides these
+qc_defaults:
+  coverage_good: 100
+  coverage_warn: 50

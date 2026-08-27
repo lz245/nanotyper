@@ -34,10 +34,16 @@ if [[ ! -f "${CWD}/samplesheet.csv" ]]; then
     exit 1
 fi
 
+# Conda environments are built once, in a shared location, and reused by
+# every analysis folder. Override with NANOTYPER_CONDA_PREFIX if the pipeline
+# directory is read-only (e.g. a shared install).
+CONDA_PREFIX_DIR="${NANOTYPER_CONDA_PREFIX:-${PIPELINE_DIR}/.snakemake/conda}"
+
 # Base args
 ARGS=(
   --snakefile "${PIPELINE_DIR}/Snakefile"
   --use-conda
+  --conda-prefix "${CONDA_PREFIX_DIR}"
   --cores all
   --rerun-incomplete
 )
@@ -51,6 +57,7 @@ fi
 
 echo "[run.sh] pipeline : ${PIPELINE_DIR}"
 echo "[run.sh] workdir  : ${CWD}"
+echo "[run.sh] conda    : ${CONDA_PREFIX_DIR}"
 echo "[run.sh] launching: snakemake ${ARGS[*]} $*"
 
 exec snakemake "${ARGS[@]}" "$@"

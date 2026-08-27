@@ -43,6 +43,6 @@ __pycache__/
 *.mmi
 *.fai
 
-# The resources/databases/ symlink points outside the repo — replaced by
-# scheme packs in a later step. Do not commit it.
-resources/databases
+# PubMLST snapshots are downloaded per scheme pack (tools/fetch_pubmlst.py),
+# never committed: they go stale and PubMLST is the citable source.
+schemes/*/pubmlst/

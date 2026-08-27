@@ -1,37 +1,27 @@
 # ------------------------------------------------------------------
-# nanotyper Snakemake workflow configuration
+# nanotyper Snakemake workflow configuration (pipeline defaults)
+#
+# Users override any key by placing a config.yaml with only the changed keys
+# in their analysis folder; run.sh passes it with --configfile.
 # ------------------------------------------------------------------
 
-# ---- paths (relative to the directory where you run snakemake) ----
+# ---- scheme pack ----
+# Directory name under schemes/. Everything organism-specific (loci, reference
+# genes, primers, PubMLST database) comes from schemes/<scheme>/scheme.yaml.
+scheme: "ecoli_achtman"
+
+# ---- paths (relative to the analysis directory where you run snakemake) ----
 paths:
   samplesheet: "samplesheet.csv"
   results_dir: "results"
-  # Database root (either real dir or a symlink into the original pipeline)
-  databases_dir: "resources/databases"
-  # Medaka reference: 7 concatenated MLST genes (FASTA)
-  reference_genome: "resources/databases/ncbi.rename.fa"
-  # PubMLST allele FASTAs (one file per locus), BLAST DBs built here on setup
-  allele_db_dir: "resources/databases/pubmlst_ecoli_achtman/alleles"
-  # PubMLST ST profile table (header: ST adk fumC gyrB icd mdh purA recA clonal_complex)
-  profile_file: "resources/databases/pubmlst_ecoli_achtman/profiles.txt"
   # Used to fill in fastq_dir for samplesheet rows that don't specify one.
   # Placeholders: {sample_id}, {run_id}, {barcode}. Relative paths resolve
   # against your analysis directory (cwd); ~ expands to home.
   fastq_dir_template: "fastq_pass/{barcode}"
 
-# ---- MLST scheme ----
-mlst:
-  scheme_name: "ecoli_achtman"
-  loci:
-    - adk
-    - fumC
-    - gyrB
-    - icd
-    - mdh
-    - purA
-    - recA
-
 # ---- medaka consensus ----
+# The model is chemistry-specific (flow cell + basecalling mode), not
+# organism-specific, so it lives here rather than in the scheme pack.
 medaka:
   model: "r1041_e82_400bps_sup_v5.0.0"
   threads: 4
@@ -45,13 +35,13 @@ blast:
 # ---- cutadapt primer coverage ----
 cutadapt:
   error_rate: 0.1
-  primers_file: "resources/databases/primers.csv"
 
-# ---- QC thresholds (tunable without code changes) ----
+# ---- QC thresholds ----
+# Override the scheme pack's qc_defaults here (reads carrying both primers).
+# QC label priority: FAIL > LOW_COVERAGE > NEW_ALLELE > NEW_ST > PASS
 qc:
-  coverage_good: 100    # >=this coverage at a locus = PASS-eligible
+  coverage_good: 100    # >= this coverage at a locus = PASS-eligible
   coverage_warn: 50     # below this = FAIL for that locus
-  # QC label priority: FAIL > LOW_COVERAGE > NEW_ALLELE > NEW_ST > PASS
 
 # ---- default resources ----
 resources:

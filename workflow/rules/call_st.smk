@@ -4,7 +4,7 @@ rule call_st:
     input:
         blast_tsvs = expand(RESULTS + "/{{sample}}/blast/{{sample}}_{locus}.tsv", locus=LOCI),
         coverage   = RESULTS + "/{sample}/coverage/{sample}_locus_coverage.tsv",
-        profiles   = config["paths"]["profile_file"]
+        profiles   = PROFILE_FILE
     output:
         call_tsv = RESULTS + "/{sample}/mlst/{sample}_call.tsv"
     params:

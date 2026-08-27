@@ -3,9 +3,9 @@
 
 rule build_blast_db:
     input:
-        fasta = config["paths"]["allele_db_dir"] + "/{locus}.fasta"
+        fasta = ALLELE_DB_DIR + "/{locus}.fasta"
     output:
-        ndb = config["paths"]["allele_db_dir"] + "/{locus}.fasta.ndb"
+        ndb = ALLELE_DB_DIR + "/{locus}.fasta.ndb"
     log:
         "logs/build_blast_db_{locus}.log"
     conda:
