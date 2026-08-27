@@ -5,6 +5,12 @@ All notable changes to nanotyper are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-08-27
+
+First full release. The pipeline, demo, tests and CI shipped in 0.9.0; what makes this 1.0
+is that the QC thresholds are now calibrated against data rather than assumed, the supported
+chemistry is stated, and the calls are validated and documented.
+
 ### Changed
 - **QC threshold `coverage_warn` 50 → 20** (`coverage_good` unchanged at 100): a locus at
   20–99× is now `LOW_COVERAGE` with its tentative ST shown, not `FAIL`. Calibrated on 480
@@ -17,6 +23,9 @@ All notable changes to nanotyper are documented here. The format follows
 - Locus-balance QC: `<locus>_share_pct`, `locus_balance_note` (threshold
   `qc.min_locus_share_pct`, default 3 %), `share_pct` in the long table, and a report panel
   that converts the weakest locus's share into the reads per barcode needed to reach `coverage_good`.
+- `docs/validation.md` — agreement with the lab's earlier pipeline over 480 isolates on five
+  R10.4.1 runs (100 % on `known` allele calls, 100 % on STs, with the all-call figure and every
+  limitation stated), the before/after effect of the calibrated thresholds, and how to reproduce it.
 - **Supported chemistry stated explicitly: R10.4.1 and later.** Legacy R9.4.1 / R10.4 data are
   detected and flagged as provisional rather than supported (see `docs/decisions/0012-qc-thresholds.md`).
 - Basecalling-model detection: `basecall_model_version_id` from the FASTQ headers is recorded

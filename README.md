@@ -376,6 +376,15 @@ nanotyper/
 
 ---
 
+## Validation
+
+[`docs/validation.md`](docs/validation.md) records how the calls were checked: 480
+isolates across five R10.4.1 runs, compared one-to-one against the lab's earlier
+pipeline on the same reads — **100 % allele agreement on `known` calls (2,994/2,994)
+and 100 % ST agreement (287/287)**, with the limitations stated (legacy chemistry
+excluded, one shallow run, metadata errors the replicate check surfaced, and a residual
+5.2 % of `NEW_ALLELE` calls awaiting confirmation).
+
 ## Citing
 
 See [`CITATION.cff`](CITATION.cff). Please also cite the underlying tools:
