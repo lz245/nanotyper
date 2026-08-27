@@ -5,6 +5,12 @@ All notable changes to nanotyper are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-08-27 — public pre-release
+
+First public version, published as a **release candidate**: the pipeline, demo,
+tests and CI are complete; the validation write-up, the medaka R9/R10 policy,
+and the per-locus QC-threshold decision (issues #1–#5) are scheduled for 1.0.0.
+
 ### Changed
 - Renamed the project from `ont-mlst-snakemake` to **nanotyper** (see `docs/decisions/0001-name-nanotyper.md`).
 - `batch_run.sh` now takes a single project folder (`<project>/data/<run>/` in, `<project>/analyses/<run>/` and `<project>/combined/` out), creates relative symlinks, and accepts `-j <cores>`.
