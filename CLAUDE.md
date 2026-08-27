@@ -31,6 +31,12 @@ nanoMLST; never describe nanotyper as derived from them.
   invocation; full tool names in filenames (`minimap2`, not `mm2`).
 - Python: `ruff format` + `ruff check`; scripts under `workflow/scripts/` are
   Snakemake `script:` targets and read `snakemake.input/output/params`.
+  Keep the logic in pure functions and touch `snakemake` only in `main()`, so
+  `test/` can import them. **Never start a Snakemake script with
+  `from __future__ import ...`** — Snakemake prepends a preamble, so the import
+  is no longer the first statement and the rule fails with SyntaxError.
+- Tests: `pytest test/` (fast, no conda) and `test/run_demo.sh` (full run on
+  the bundled demo, asserts exact STs) must both pass before a PR.
 - One Snakemake rule per file in `workflow/rules/`; pinned versions in
   `workflow/envs/`.
 - Keep the README usable by a microbiologist with no bioinformatics background:

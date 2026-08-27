@@ -23,6 +23,11 @@ All notable changes to nanotyper are documented here. The format follows
   and snapshot date.
 - Shared conda environment location (`<pipeline>/.snakemake/conda`, override with
   `NANOTYPER_CONDA_PREFIX`) so environments are built once, not per analysis folder.
+- Demo dataset (`test/demo/`, 4 barcodes, 11 MB) with `test/run_demo.sh` and `test/check_demo.py`
+  asserting exact STs/alleles/QC labels; `tools/make_demo.py` regenerates it deterministically.
+- Unit tests (`pytest test/`) for MLST calling, QC tiers, samplesheet lint, fetch-script parsing;
+  `call_st.py` refactored into importable pure functions (no behaviour change).
+- GitHub Actions CI (`unit`, `lint`, `demo` jobs; weekly cron), `ruff.toml`, `.pre-commit-config.yaml`.
 - `LICENSE` (MIT), `CITATION.cff`, `CONTRIBUTING.md`, repo-level `CLAUDE.md`, and `docs/decisions/` design records.
 - `.gitignore` rules for session backups, raw reads, and derived BLAST/minimap2 index files.
 

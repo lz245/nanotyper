@@ -36,6 +36,22 @@ per-locus QC, and an interactive HTML report.
 
 ---
 
+## Try it in five minutes
+
+The repository ships a four-barcode demo (three known STs and one deliberate
+failure). After the one-time setup:
+
+```bash
+~/nanotyper/test/run_demo.sh
+```
+
+It runs the pipeline inside `test/demo/` and then checks the calls (ST602,
+ST349, ST937 with every allele; barcode04 must FAIL). The first run also builds
+the conda environments (~15 min); later runs take a few minutes.
+Open `test/demo/results/mlst_report.html` to see what a report looks like.
+
+---
+
 ## Recommended project layout
 
 Keep the pipeline (code) separate from your projects (data + results). One

@@ -1,0 +1,21 @@
+# Linting for the Python parts of nanotyper (workflow scripts, tools, tests).
+# Conservative rule set: pyflakes (F) plus the pycodestyle error subset
+# (E4/E7/E9) — real defects (undefined names, unused imports, syntax) without
+# a style rewrite. Same configuration as the sibling nano16s repo.
+
+line-length = 120
+target-version = "py310"
+
+[lint]
+select = ["E4", "E7", "E9", "F"]
+# E741: `l` is the locus loop variable throughout the calling scripts and tests;
+# renaming it buys nothing and touches science-bearing code.
+ignore = ["E741"]
+
+[lint.per-file-ignores]
+# Snakemake injects `snakemake` as a global before executing a script.
+"workflow/scripts/*.py" = ["F821"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
