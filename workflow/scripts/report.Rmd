@@ -453,9 +453,10 @@ if ("model_note" %in% names(summary_df)) {
     models <- unique(sub("^basecall_model_mismatch:", "", bad$model_note))
     cat(sprintf(
       paste0("<div class='alert-box'><strong>Basecalling model mismatch (%d of %d samples):</strong> ",
-             "%s. Reads basecalled on one chemistry and polished with a medaka model for another ",
-             "retain motif-specific errors that look like novel alleles. Use the medaka model that ",
-             "matches the chemistry, or re-basecall.</div>"),
+             "%s. nanotyper targets R10.4.1 and later; reads basecalled on an older chemistry and ",
+             "polished with a current medaka model retain motif-specific errors that look like novel ",
+             "alleles, so allele calls for these samples are provisional. Re-basecall with a current ",
+             "model, or exclude them.</div>"),
       nrow(bad), nrow(summary_df), paste(models, collapse = "; ")))
   }
 }

@@ -17,6 +17,8 @@ All notable changes to nanotyper are documented here. The format follows
 - Locus-balance QC: `<locus>_share_pct`, `locus_balance_note` (threshold
   `qc.min_locus_share_pct`, default 3 %), `share_pct` in the long table, and a report panel
   that converts the weakest locus's share into the reads per barcode needed to reach `coverage_good`.
+- **Supported chemistry stated explicitly: R10.4.1 and later.** Legacy R9.4.1 / R10.4 data are
+  detected and flagged as provisional rather than supported (see `docs/decisions/0012-qc-thresholds.md`).
 - Basecalling-model detection: `basecall_model_version_id` from the FASTQ headers is recorded
   per sample (`basecall_model`), checked against the medaka model (`model_note`), reported, and
   written to `provenance.yaml`.

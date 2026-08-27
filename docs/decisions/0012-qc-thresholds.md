@@ -66,3 +66,20 @@ cannot correct a motif the basecaller got wrong, so the pipeline must say so.
   [#9](https://github.com/lz245/nanotyper/issues/9).
 - New summary columns: `<locus>_share_pct`, `locus_balance_note`, `basecall_model`,
   `model_note`; new long-format column `share_pct`.
+
+---
+
+## Addendum, 2026-08-27 — supported chemistry
+
+**Decided** (PI): nanotyper targets **R10.4.1 and later only**. Legacy R9.4.1 / R10.4 data
+are detected and flagged as provisional, but the pipeline will not carry a second polishing
+environment for them, and issue #2 is closed on that basis.
+
+**Why**: Oxford Nanopore has moved on from those chemistries and medaka 2.x no longer ships
+their model families, so a legacy path would be maintenance with no future users. Detection
+(already implemented above) is the useful part: it tells a user with old data why their
+`NEW_ALLELE` count is high instead of silently mis-polishing.
+
+**Consequence**: the six 2022 runs (005–010) are out of scope for accuracy claims. Validation
+(#1) rests on the five 2025 R10.4.1/SUP-v5 runs, 480 samples. Issue #10 narrows to run 012,
+which is current chemistry and simply shallow.

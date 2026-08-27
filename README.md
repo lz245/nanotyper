@@ -10,6 +10,8 @@ per-locus QC, and an interactive HTML report.
 **Target users:** microbiology labs with no bioinformatics support.
 **Platforms:** macOS (Intel + Apple Silicon) and Linux.
 **Scheme (v1.0):** *Escherichia coli* Achtman 7-locus MLST. Up to 96 barcodes per run.
+**Supported chemistry:** R10.4.1 and later. Older flow cells (R9.4.1, R10.4) are
+detected and flagged, but not supported — see "Basecalling model" below.
 **Sibling tool:** [nano16s](https://github.com/lz245/nano16s) (full-length 16S profiling) from the same lab.
 
 > **Relationship to the published method.** nanotyper is the successor to the
@@ -271,7 +273,8 @@ Unspecified keys fall back to the pipeline defaults (see
 [`config.yaml`](config.yaml) at the pipeline root).
 
 **Medaka model:** the default targets R10.4.1 flow cells (`r1041_*`). Pick the
-model that matches your flow cell chemistry and basecalling mode.
+`r1041_*` model that matches your basecalling mode (fast / hac / sup). Older
+chemistries are out of scope (see "Basecalling model").
 
 ---
 
@@ -306,9 +309,17 @@ instead of hiding the problem.
 
 Each sample's `basecall_model_version_id` is read from the FASTQ headers, recorded
 in the summary and `provenance.yaml`, and compared with the medaka model in use.
-A mismatch is flagged: reads basecalled on one chemistry and polished with a model
-for another keep motif-specific errors that BLAST reports as novel alleles. Use the
-medaka model matching the chemistry that produced the reads.
+A mismatch is flagged, because reads basecalled on one chemistry and polished with a
+model for another keep motif-specific errors that BLAST reports as novel alleles.
+
+**nanotyper targets R10.4.1 and later only.** Legacy R9.4.1 and R10.4 data are
+deliberately out of scope: medaka 2.x no longer ships those model families, Oxford
+Nanopore has retired the chemistries, and carrying a second polishing environment for
+them would add a maintenance burden with no future users. In the lab dataset behind
+`docs/qc-calibration.md`, legacy runs produced imperfect BLAST matches at 12–21 % of
+locus calls even at ≥200× depth, against 5 % on R10.4.1 — so their allele calls should
+be treated as provisional. If you must analyse such data, re-basecall it with a current
+model first.
 
 To re-derive all of this on your own project:
 
