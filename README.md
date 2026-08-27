@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/lz245/nanotyper/actions/workflows/ci.yml/badge.svg)](https://github.com/lz245/nanotyper/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22131409.svg)](https://doi.org/10.5281/zenodo.22131409)
 
 A portable, reproducible Snakemake workflow that takes Oxford Nanopore
 `fastq_pass/` folders of MLST amplicons and produces sequence-type (ST) calls,
@@ -387,7 +388,10 @@ excluded, one shallow run, metadata errors the replicate check surfaced, and a r
 
 ## Citing
 
-See [`CITATION.cff`](CITATION.cff). Please also cite the underlying tools:
+Archived on Zenodo — cite the concept DOI [10.5281/zenodo.22131409](https://doi.org/10.5281/zenodo.22131409),
+which always resolves to the newest version, or the version DOI
+[10.5281/zenodo.22131410](https://doi.org/10.5281/zenodo.22131410) for v1.0.0 specifically when
+exact reproducibility matters. Machine-readable metadata is in [`CITATION.cff`](CITATION.cff). Please also cite the underlying tools:
 PubMLST *E. coli* Achtman scheme (Wirth et al. 2006; Jolley et al. 2018),
 medaka (Oxford Nanopore Technologies), BLAST+ (NCBI), cutadapt (Martin 2011),
 Snakemake (Mölder et al. 2021).
