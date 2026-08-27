@@ -10,7 +10,6 @@ cutadapt's 'read count' is most reliably obtained from the JSON report.
 """
 import json
 import subprocess
-import sys
 from pathlib import Path
 import pandas as pd
 

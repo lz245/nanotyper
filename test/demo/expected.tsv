@@ -1,0 +1,5 @@
+sample_id	ST	adk	fumC	gyrB	icd	mdh	purA	recA	qc_label
+MS1545	602	6	19	33	26	11	8	6	PASS
+MS1559	349	34	36	39	87	67	16	4	PASS
+MS1469	937	6	29	5	26	24	8	6	PASS
+MS1467	-	-	-	-	-	-	-	-	FAIL

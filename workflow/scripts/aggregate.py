@@ -81,7 +81,6 @@ def write_sheet(ws, df: pd.DataFrame, row_fill_by_col: str | None,
         c.font = header_font
         c.alignment = header_align
 
-    row_key_col = df.columns.get_loc(row_fill_by_col) + 1 if row_fill_by_col else None
     for r_idx, (_, row) in enumerate(df.iterrows(), start=2):
         row_fill = None
         if row_fill_by_col:
@@ -125,7 +124,8 @@ for idx, col in enumerate(long_df.columns, 1):
 for r_idx, (_, row) in enumerate(long_df.iterrows(), start=2):
     for c_idx, col in enumerate(long_df.columns, 1):
         val = row[col]
-        if pd.isna(val): val = ""
+        if pd.isna(val):
+            val = ""
         ws2.cell(row=r_idx, column=c_idx, value=val)
     if long_flag_col:
         flag_val = row.get("flag", "")

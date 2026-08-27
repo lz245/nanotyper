@@ -1,0 +1,5 @@
+sample_id,biological_id,run_id,barcode,sample_type
+MS1545,MS1545,demo,barcode01,clinical
+MS1559,MS1559,demo,barcode02,clinical
+MS1469,MS1469,demo,barcode03,environmental
+MS1467,MS1467,demo,barcode04,clinical

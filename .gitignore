@@ -8,6 +8,7 @@ run.log
 *.log
 *.fastq
 *.fastq.gz
+!test/demo/fastq_pass/**/*.fastq.gz
 
 # Claude Code / editor session files
 .session-backup*

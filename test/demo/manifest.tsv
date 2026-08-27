@@ -1,0 +1,5 @@
+barcode	source_dir	n_reads	seed
+barcode01	/Users/lz245/ont-mlst-pipeline/data/raw/test/fastq_pass/barcode04	7000	42
+barcode02	/Users/lz245/ont-mlst-pipeline/data/raw/test/fastq_pass/barcode05	7000	42
+barcode03	/Users/lz245/ont-mlst-pipeline/data/raw/test/fastq_pass/barcode18	7000	42
+barcode04	/Users/lz245/ont-mlst-pipeline/data/raw/test/fastq_pass/barcode02	7000	42

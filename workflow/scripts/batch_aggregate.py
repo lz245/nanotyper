@@ -11,7 +11,6 @@ produces:
     replicates.tsv          biological_id × ST groups that disagree (if biological_id used)
 """
 import argparse
-import sys
 from pathlib import Path
 
 import pandas as pd
