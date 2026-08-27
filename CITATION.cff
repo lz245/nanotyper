@@ -1,0 +1,56 @@
+cff-version: 1.2.0
+message: "If you use nanotyper, please cite it along with the underlying tools listed in the README."
+title: "nanotyper: Nanopore amplicon multilocus sequence typing"
+abstract: >-
+  A Snakemake workflow that calls multilocus sequence types (ST) from Oxford
+  Nanopore amplicon sequencing of MLST housekeeping genes: medaka consensus per
+  locus, BLAST allele assignment against PubMLST, primer-coverage QC with explicit
+  PASS/FAIL tiers, and an interactive HTML report. Runs on an ordinary laptop or
+  workstation; batch mode processes up to 96 barcodes per run across many runs
+  with cross-run aggregation and replicate checks. Version 1.0 ships the
+  Escherichia coli Achtman 7-locus scheme; other schemes are added as scheme packs.
+authors:
+  - family-names: Zhang
+    given-names: Li
+    affiliation: Mississippi State University
+license: MIT
+type: software
+version: 0.1.0
+repository-code: "https://github.com/lz245/nanotyper"
+keywords:
+  - nanopore
+  - MLST
+  - multilocus sequence typing
+  - Escherichia coli
+  - amplicon sequencing
+  - PubMLST
+  - Snakemake
+references:
+  - type: article
+    title: "High-throughput Oxford Nanopore sequencing-based approach for the multilocus sequence typing analysis of large-scale avian Escherichia coli study in Mississippi"
+    authors:
+      - family-names: Jia
+        given-names: Linan
+      - family-names: Arick
+        given-names: Mark A.
+      - family-names: Hsu
+        given-names: Chuan-Yu
+      - family-names: Peterson
+        given-names: Daniel G.
+      - family-names: Evans
+        given-names: Jeffrey D.
+      - family-names: Robinson
+        given-names: Kelsy
+      - family-names: Sukumaran
+        given-names: Anuraj T.
+      - family-names: Ramachandran
+        given-names: Reshma
+      - family-names: Adhikari
+        given-names: Pratima
+      - family-names: Zhang
+        given-names: Li
+    journal: "Poultry Science"
+    volume: 103
+    year: 2024
+    doi: 10.1016/j.psj.2024.104067
+    notes: "The wet-lab and original analysis method that nanotyper re-implements and extends."
