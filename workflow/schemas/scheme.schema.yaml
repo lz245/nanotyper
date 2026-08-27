@@ -24,6 +24,7 @@ properties:
   qc_defaults:
     type: object
     properties:
-      coverage_good: { type: integer, minimum: 0 }
-      coverage_warn: { type: integer, minimum: 0 }
+      coverage_good:       { type: integer, minimum: 0 }
+      coverage_warn:       { type: integer, minimum: 0 }
+      min_locus_share_pct: { type: number,  minimum: 0, maximum: 100 }
 required: [name, organism, pubmlst, loci, reference, primers]

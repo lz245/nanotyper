@@ -40,8 +40,9 @@ cutadapt:
 # Override the scheme pack's qc_defaults here (reads carrying both primers).
 # QC label priority: FAIL > LOW_COVERAGE > NEW_ALLELE > NEW_ST > PASS
 qc:
-  coverage_good: 100    # >= this coverage at a locus = PASS-eligible
-  coverage_warn: 50     # below this = FAIL for that locus
+  coverage_good: 100        # >= this both-primer coverage at every locus = PASS-eligible
+  coverage_warn: 20         # below this at any locus = FAIL (docs/decisions/0012-qc-thresholds.md)
+  min_locus_share_pct: 3    # locus below this % of on-target reads -> locus_balance_note
 
 # ---- default resources ----
 resources:

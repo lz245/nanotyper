@@ -133,3 +133,20 @@ def test_call_sample_end_to_end(tmp_path):
     assert row["ST"] == "602" and row["qc_label"] == "PASS"
     assert [row[l] for l in LOCI] == list(alleles.values())
     assert row["mdh_coverage"] == 800 and row["mdh_flag"] == "known"
+
+def test_qc_default_thresholds_from_shipped_config():
+    """The shipped defaults (100/20) must agree between config.yaml and the scheme pack."""
+    import yaml
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    cfg = yaml.safe_load((root / "config.yaml").read_text())["qc"]
+    sch = yaml.safe_load((root / "schemes" / "ecoli_achtman" / "scheme.yaml").read_text())["qc_defaults"]
+    assert cfg["coverage_good"] == sch["coverage_good"] == 100
+    assert cfg["coverage_warn"] == sch["coverage_warn"] == 20
+    assert cfg["min_locus_share_pct"] == sch["min_locus_share_pct"] == 3
+    # a locus at 25x is LOW_COVERAGE under the new defaults, FAIL under the old ones
+    flags = {l: "known" for l in LOCI}
+    cov = {l: 500.0 for l in LOCI}
+    cov["mdh"] = 25.0
+    assert call_st.assign_qc(flags, cov, LOCI, cfg["coverage_warn"], cfg["coverage_good"], "602")[0] == "LOW_COVERAGE"
+    assert call_st.assign_qc(flags, cov, LOCI, 50, 100, "602")[0] == "FAIL"

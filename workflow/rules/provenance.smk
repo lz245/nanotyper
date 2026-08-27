@@ -7,7 +7,8 @@ rule provenance:
         db_info = DB_INFO_FILE,
         scheme  = str(SCHEME_DIR / "scheme.yaml"),
         envs    = [str(PIPELINE_DIR / "workflow" / "envs" / f) for f in
-                   ("medaka.yaml", "blast.yaml", "cutadapt.yaml", "python.yaml", "report.yaml")]
+                   ("medaka.yaml", "blast.yaml", "cutadapt.yaml", "python.yaml", "report.yaml")],
+        basecall = expand(RESULTS + "/{sample}/medaka/basecall_model.txt", sample=SAMPLES)
     output:
         yaml = RESULTS + "/provenance.yaml"
     params:
