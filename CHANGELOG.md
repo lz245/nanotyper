@@ -11,6 +11,9 @@ All notable changes to nanotyper are documented here. The format follows
 - `docs/tested-on.md` — environments where the shipped demo has been run end to end,
   with the wall-clock time and whether the conda environments were already built (#14).
 
+### Fixed
+- Use the supported JSON Schema 2020-12 identifier to avoid validator warnings on fresh installs.
+
 ## [1.0.0] — 2026-08-27
 
 First full release. The pipeline, demo, tests and CI shipped in 0.9.0; what makes this 1.0
