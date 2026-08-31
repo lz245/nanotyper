@@ -8,6 +8,8 @@ All notable changes to nanotyper are documented here. The format follows
 ### Added
 - Zenodo DOI badge and `doi:` / `identifiers:` in `CITATION.cff` (concept DOI 10.5281/zenodo.22131409,
   v1.0.0 DOI 10.5281/zenodo.22131410).
+- `docs/tested-on.md` — environments where the shipped demo has been run end to end,
+  with the wall-clock time and whether the conda environments were already built (#14).
 
 ## [1.0.0] — 2026-08-27
 
