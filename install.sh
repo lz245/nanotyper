@@ -19,6 +19,16 @@ err()  { printf "\033[1;31m[install.sh]\033[0m ✗ %s\n"   "$*" >&2; }
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$HERE"
 
+# ---------------- Parse arguments ----------------
+DEV=0
+for arg in "$@"; do
+  case "$arg" in
+    --dev) DEV=1 ;;
+    *) err "Unknown argument: $arg"; exit 1 ;;
+  esac
+done
+# ------------------------------------------------
+
 # ---------------- 1) OS + arch ----------------
 OS="$(uname -s)"
 ARCH="$(uname -m)"
@@ -113,7 +123,15 @@ else
   fi
 fi
 
-# ---------------- 5) Done ----------------
+# ---------------- 5) Developer tools (opt-in) ----------------
+if [[ $DEV -eq 1 ]]; then
+  say "Installing developer tools from requirements-dev.txt..."
+  python3 -m pip install -r requirements-dev.txt
+  ok "Developer tools installed: pytest, ruff, shellcheck (from requirements-dev.txt)"
+fi
+# ----------------------------------------------------------
+
+# ---------------- 6) Done ----------------
 cat <<EOF
 
 ────────────────────────────────────────────────────────────────

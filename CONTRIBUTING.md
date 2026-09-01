@@ -16,7 +16,9 @@ rules keep a two-person (PI + student) project reproducible and publishable.
    weaken it.
 5. **Update `CHANGELOG.md`** under `[Unreleased]` in the same PR as the change.
 6. **Before opening a PR**: `pytest test/`, `ruff check .`, and `test/run_demo.sh`
-   must pass locally. CI runs the same three plus shellcheck.
+   must pass locally. CI runs the same three plus shellcheck. Run
+   `./install.sh --dev` once to install pytest/ruff/shellcheck; the dev tool
+   list lives in `requirements-dev.txt`.
 
 ## Division of responsibilities
 
