@@ -38,7 +38,18 @@ detected and flagged, but not supported — see "Basecalling model" below.
    ~/nanotyper/install.sh
    ```
    `install.sh` checks/installs the two prerequisites (`mamba`/`conda` + `snakemake>=8`).
-2. All other tools (medaka, BLAST, cutadapt, R) are installed automatically on the first run.
+2. Put the `nanotyper` command on your PATH:
+   ```bash
+   echo 'export PATH="$HOME/nanotyper/bin:$PATH"' >> ~/.zshrc   # or ~/.bashrc
+   source ~/.zshrc
+   nanotyper --help
+   ```
+3. All other tools (medaka, BLAST, cutadapt, R) are installed automatically on the first run.
+
+Everything below uses the `nanotyper` command. It is a thin wrapper: each
+subcommand calls the matching script in the pipeline folder (`run.sh`,
+`batch_run.sh`, `test/run_demo.sh`, `tools/fetch_pubmlst.py`), and those still
+work if you prefer to call them directly by path.
 
 ---
 
@@ -48,7 +59,7 @@ The repository ships a four-barcode demo (three known STs and one deliberate
 failure). After the one-time setup:
 
 ```bash
-~/nanotyper/test/run_demo.sh
+nanotyper demo
 ```
 
 It runs the pipeline inside `test/demo/` and then checks the calls (ST602,
@@ -73,7 +84,7 @@ or zipped and sent to a collaborator as a single self-contained record.
             run003/fastq_pass/barcode01/ ...
             run003/samplesheet.csv        ← you write this (see below)
             run004/ ...
-        analyses/                         ← created by batch_run.sh
+        analyses/                         ← created by `nanotyper batch`
             run003/samplesheet.csv
             run003/fastq_pass -> ../../data/run003/fastq_pass
             run003/results/               ← pipeline outputs
@@ -97,7 +108,7 @@ Why this layout:
 Put each sequencing run under `data/<run>/` with its `samplesheet.csv`, then:
 
 ```bash
-~/nanotyper/batch_run.sh ~/nanotyper-projects/2026-04_APEC-MLST-11-runs
+nanotyper batch ~/nanotyper-projects/2026-04_APEC-MLST-11-runs
 ```
 
 Behaviour:
@@ -108,7 +119,7 @@ Behaviour:
 
 Aggregate-only (after the fact, without rerunning any pipelines):
 ```bash
-~/nanotyper/batch_run.sh --aggregate ~/nanotyper-projects/2026-04_APEC-MLST-11-runs
+nanotyper batch --aggregate ~/nanotyper-projects/2026-04_APEC-MLST-11-runs
 ```
 
 Cross-run outputs land in `<project>/combined/`:
@@ -131,8 +142,8 @@ cd       ~/nanotyper-projects/<project>/analyses/<run>
 ln -s ../../data/<run>/fastq_pass ./fastq_pass
 cp    ../../data/<run>/samplesheet.csv ./samplesheet.csv
 
-~/nanotyper/run.sh -n           # dry run — verify the plan
-~/nanotyper/run.sh -j 4         # real run, 4 parallel cores
+nanotyper run -n                # dry run — verify the plan
+nanotyper run -j 4              # real run, 4 parallel cores
 open results/mlst_report.html
 ```
 
@@ -140,14 +151,6 @@ Outputs in `./results/`:
 - `mlst_summary.tsv` — one row per sample, ST + alleles + QC
 - `mlst_summary.xlsx` — same data, colour-coded for Excel
 - `mlst_report.html` — interactive report, open in any browser
-
-**Tip — add a shell alias** so you don't retype the full path every time:
-
-```bash
-echo 'alias nanotyper="~/nanotyper/run.sh"' >> ~/.zshrc
-source ~/.zshrc
-# then just:  nanotyper          (or  nanotyper -n  for a dry run)
-```
 
 ## Tools
 
@@ -246,8 +249,8 @@ schemes/ecoli_achtman/
 `install.sh` downloads the PubMLST snapshot once. To inspect or refresh it:
 
 ```bash
-~/nanotyper/tools/fetch_pubmlst.py ecoli_achtman --check     # date and allele/ST counts
-~/nanotyper/tools/fetch_pubmlst.py ecoli_achtman --update    # re-download (records the new date)
+nanotyper fetch-db ecoli_achtman --check     # date and allele/ST counts
+nanotyper fetch-db ecoli_achtman --update    # re-download (records the new date)
 ```
 
 Every analysis writes `results/provenance.yaml` (pipeline version and commit,
@@ -333,11 +336,16 @@ To re-derive all of this on your own project:
 ## Common commands
 
 ```bash
-~/nanotyper/run.sh                  # full run (inside an analysis folder)
-~/nanotyper/run.sh -n               # dry run
-~/nanotyper/run.sh -j 4             # limit to 4 cores
-~/nanotyper/run.sh --unlock         # recover from a crashed run
-~/nanotyper/run.sh --forceall       # re-run everything from scratch
+nanotyper run                       # full run (inside an analysis folder)
+nanotyper run -n                    # dry run
+nanotyper run -j 4                  # limit to 4 cores
+nanotyper run --unlock              # recover from a crashed run
+nanotyper run --forceall            # re-run everything from scratch
+
+nanotyper batch <project_dir>       # every run in a project, then aggregate
+nanotyper demo                      # the shipped four-barcode demo
+nanotyper fetch-db <scheme> --check # PubMLST snapshot date and counts
+nanotyper version                   # version and git commit
 ```
 
 ---
@@ -351,7 +359,7 @@ To re-derive all of this on your own project:
 **Sample labelled `FAIL`** → the report's "Samples needing attention" section
 shows per-locus status dots and the exact reason (low coverage, no hit, etc.).
 
-**Re-run just one sample** → delete `./results/<sample_id>/` and run `~/nanotyper/run.sh`.
+**Re-run just one sample** → delete `./results/<sample_id>/` and run `nanotyper run`.
 
 ---
 
@@ -361,6 +369,7 @@ shows per-locus status dots and the exact reason (low coverage, no hit, etc.).
 nanotyper/
 ├── Snakefile              ← pipeline definition
 ├── config.yaml            ← defaults: scheme selection, thresholds, medaka model
+├── bin/nanotyper          ← the command; dispatches to the scripts below
 ├── run.sh                 ← single-run runner (call from an analysis folder)
 ├── batch_run.sh           ← project-level batch runner + cross-run aggregation
 ├── install.sh             ← one-time setup
