@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# ------------------------------------------------------------------
+# nanotyper — single entry point for the pipeline.
+#
+# Usage:
+#   nanotyper run [snakemake args]     analyse the current analysis folder
+#   nanotyper batch <project_dir>      analyse a whole project, then aggregate
+#   nanotyper demo                     run the shipped four-barcode demo
+#   nanotyper fetch-db <scheme>        download/refresh a PubMLST scheme pack
+#   nanotyper version                  version and git commit
+#   nanotyper --help                   this message
+#
+# This is a thin dispatcher: each subcommand calls the underlying script
+# (run.sh, batch_run.sh, test/run_demo.sh, tools/fetch_pubmlst.py), which
+# all keep working when invoked directly.
+# ------------------------------------------------------------------
+set -euo pipefail
+
+# ---- locate the pipeline ----
+# Two layouts are supported: a source checkout, where this script is
+# <root>/bin/nanotyper and the Snakefile is one level up; and a package, which
+# installs the CLI to $PREFIX/bin and the pipeline to $PREFIX/share/nanotyper.
+# Resolve symlinks first, so a CLI put on PATH with `ln -s` finds whichever
+# layout it actually points into rather than guessing from the link itself.
+# readlink -f would do this in one line but is not available on macOS.
+SOURCE="${BASH_SOURCE[0]}"
+while [[ -L "$SOURCE" ]]; do
+    LINK_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ "$SOURCE" != /* ]] && SOURCE="$LINK_DIR/$SOURCE"
+done
+BIN_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+
+if [[ -f "$BIN_DIR/../Snakefile" ]]; then
+    ROOT="$(cd -P "$BIN_DIR/.." && pwd)"
+elif [[ -f "$BIN_DIR/../share/nanotyper/Snakefile" ]]; then
+    ROOT="$(cd -P "$BIN_DIR/../share/nanotyper" && pwd)"
+else
+    printf "\033[1;31m[nanotyper]\033[0m \u2717 %s\n" \
+        "cannot find the pipeline (no Snakefile near $BIN_DIR)" >&2
+    exit 1
+fi
+
+err() { printf "\033[1;31m[nanotyper]\033[0m ✗ %s\n" "$*" >&2; }
+
+usage() {
+    sed -n '3,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    cat <<EOF
+
+Examples:
+  cd ~/nanotyper-projects/apec/analyses/run003
+  nanotyper run -n                     dry run — show the plan, execute nothing
+  nanotyper run -j 4                   real run on 4 cores
+
+  nanotyper batch ~/nanotyper-projects/apec
+  nanotyper demo                       four barcodes, ends in "all checks passed"
+  nanotyper fetch-db ecoli_achtman --check
+  nanotyper version
+
+Pipeline: $ROOT
+EOF
+}
+
+# ---- version ----
+show_version() {
+    local version="unknown" commit
+    [[ -f "$ROOT/VERSION" ]] && version="$(tr -d '[:space:]' < "$ROOT/VERSION")"
+    # A packaged install has no .git; match the Snakefile's "no-git" fallback.
+    commit="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo "no-git")"
+    echo "nanotyper $version ($commit)"
+}
+
+# ---- dispatch ----
+# Each branch exec's the underlying script so its exit status, signals and
+# working directory semantics are preserved exactly. In particular `run`
+# must NOT cd: run.sh reads samplesheet.csv from, and writes results/ to,
+# the directory the user is standing in.
+case "${1:-}" in
+    run)
+        shift
+        exec "$ROOT/run.sh" "$@"
+        ;;
+    batch)
+        shift
+        exec "$ROOT/batch_run.sh" "$@"
+        ;;
+    demo)
+        shift
+        exec "$ROOT/test/run_demo.sh" "$@"
+        ;;
+    fetch-db)
+        shift
+        exec python3 "$ROOT/tools/fetch_pubmlst.py" "$@"
+        ;;
+    version|--version|-V)
+        show_version
+        ;;
+    -h|--help|help|"")
+        usage
+        ;;
+    *)
+        err "unknown command: $1"
+        echo >&2
+        usage >&2
+        exit 1
+        ;;
+esac

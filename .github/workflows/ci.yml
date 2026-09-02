@@ -38,7 +38,7 @@ jobs:
       - name: Every script at least parses
         run: |
           for f in $(git ls-files '*.py'); do python -m py_compile "$f" || exit 1; done
-          for f in run.sh batch_run.sh install.sh test/run_demo.sh; do bash -n "$f" || exit 1; done
+          for f in $(git ls-files '*.sh') bin/nanotyper; do bash -n "$f" || exit 1; done
 
   lint:
     name: lint
@@ -53,7 +53,7 @@ jobs:
       - name: ruff
         run: ruff check .
       - name: shellcheck
-        run: shellcheck run.sh batch_run.sh install.sh test/run_demo.sh
+        run: shellcheck $(git ls-files '*.sh') bin/nanotyper
       - name: snakemake --lint (parses the workflow with the demo samplesheet)
         working-directory: test/demo
         run: snakemake --snakefile ../../Snakefile --lint || true

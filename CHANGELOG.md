@@ -10,6 +10,9 @@ All notable changes to nanotyper are documented here. The format follows
   v1.0.0 DOI 10.5281/zenodo.22131410).
 - `docs/tested-on.md` — environments where the shipped demo has been run end to end,
   with the wall-clock time and whether the conda environments were already built (#14).
+- `bin/nanotyper` — one command for the whole pipeline: `run`, `batch`, `demo`,
+  `fetch-db`, `version`, `--help`. It dispatches to the existing scripts, which keep
+  working when called directly; the README now leads with it (#17).
 
 ## [1.0.0] — 2026-08-27
 
